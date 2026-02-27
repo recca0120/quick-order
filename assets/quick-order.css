@@ -1,0 +1,48 @@
+.quick-order-form .form-table th {
+    width: 120px;
+}
+
+.quick-order-form .required {
+    color: #d63638;
+}
+
+.quick-order-result {
+    margin-top: 20px;
+}
+
+.quick-order-result input[readonly] {
+    background: #f0f0f1;
+    cursor: text;
+}
+
+.quick-order-frontend {
+    max-width: 600px;
+    margin: 20px auto;
+    padding: 20px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.quick-order-frontend .form-table th {
+    display: block;
+    width: auto;
+    padding: 10px 0 2px;
+    font-weight: 600;
+}
+
+.quick-order-frontend .form-table td {
+    display: block;
+    padding: 2px 0 10px;
+}
+
+.quick-order-frontend input[type="number"],
+.quick-order-frontend input[type="text"],
+.quick-order-frontend textarea {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.quick-order-frontend .button {
+    padding: 8px 24px;
+}
