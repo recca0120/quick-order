@@ -139,6 +139,44 @@ class RestApiTest extends WP_UnitTestCase
         $this->assertEquals(403, $response->get_status());
     }
 
+    public function test_api_key_from_constant_grants_access()
+    {
+        add_filter('quick_order_api_key_from_constant', function () {
+            return 'constant-key-999';
+        });
+        delete_option('quick_order_api_key');
+        wp_set_current_user(0);
+
+        $request = new WP_REST_Request('POST', '/quick-order/v1/orders');
+        $request->set_header('X-API-Key', 'constant-key-999');
+        $request->set_param('amount', 100);
+
+        $response = rest_do_request($request);
+
+        $this->assertEquals(201, $response->get_status());
+
+        remove_all_filters('quick_order_api_key_from_constant');
+    }
+
+    public function test_constant_api_key_takes_precedence_over_option()
+    {
+        update_option('quick_order_api_key', 'option-key');
+        add_filter('quick_order_api_key_from_constant', function () {
+            return 'constant-key';
+        });
+        wp_set_current_user(0);
+
+        $request = new WP_REST_Request('POST', '/quick-order/v1/orders');
+        $request->set_header('X-API-Key', 'option-key');
+        $request->set_param('amount', 100);
+
+        $response = rest_do_request($request);
+
+        $this->assertEquals(403, $response->get_status(), 'Option key should not work when constant is set');
+
+        remove_all_filters('quick_order_api_key_from_constant');
+    }
+
     // ── GET /orders/{id} ──
 
     public function test_get_order_returns_order_details()

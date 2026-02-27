@@ -95,18 +95,74 @@ class AdminTest extends WP_Ajax_UnitTestCase
         $this->assertArrayHasKey('quick_order_api_key', $wp_registered_settings);
     }
 
-    public function test_settings_page_renders_api_key_field()
+    public function test_render_page_has_nav_tabs()
     {
         do_action('admin_init');
 
         ob_start();
-        $this->admin->renderSettingsPage();
+        $this->admin->renderPage();
+        $html = ob_get_clean();
+
+        $this->assertStringContainsString('nav-tab-wrapper', $html);
+        $this->assertStringContainsString('tab-order', $html);
+        $this->assertStringContainsString('tab-settings', $html);
+    }
+
+    public function test_render_page_has_card_wrapper()
+    {
+        do_action('admin_init');
+
+        ob_start();
+        $this->admin->renderPage();
+        $html = ob_get_clean();
+
+        $this->assertStringContainsString('qo-card', $html);
+    }
+
+    public function test_render_page_contains_form_and_settings()
+    {
+        do_action('admin_init');
+
+        ob_start();
+        $this->admin->renderPage();
         $html = ob_get_clean();
 
         $this->assertStringContainsString('quick_order_api_key', $html);
+        $this->assertStringContainsString('qo-amount', $html);
     }
 
-    public function test_settings_menu_is_registered()
+    public function test_api_key_field_shows_editable_input_when_no_constant()
+    {
+        do_action('admin_init');
+
+        ob_start();
+        $this->admin->renderApiKeyField();
+        $html = ob_get_clean();
+
+        $this->assertStringContainsString('<input type="text"', $html);
+        $this->assertStringNotContainsString('disabled', $html);
+    }
+
+    public function test_api_key_field_shows_disabled_when_constant_defined()
+    {
+        do_action('admin_init');
+
+        // Simulate constant by setting filter
+        add_filter('quick_order_api_key_from_constant', function () {
+            return 'secret-from-config';
+        });
+
+        ob_start();
+        $this->admin->renderApiKeyField();
+        $html = ob_get_clean();
+
+        $this->assertStringContainsString('disabled', $html);
+        $this->assertStringContainsString('*', $html);
+
+        remove_all_filters('quick_order_api_key_from_constant');
+    }
+
+    public function test_no_separate_settings_menu()
     {
         do_action('admin_menu');
 
@@ -120,7 +176,7 @@ class AdminTest extends WP_Ajax_UnitTestCase
                 }
             }
         }
-        $this->assertTrue($found, 'Quick Order Settings submenu should be registered under WooCommerce');
+        $this->assertFalse($found, 'Should not have a separate settings submenu');
     }
 
     private function captureAjax(callable $callback): array

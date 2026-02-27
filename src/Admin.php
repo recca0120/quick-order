@@ -30,14 +30,6 @@ class Admin
             [$this, 'renderPage']
         );
 
-        add_submenu_page(
-            'woocommerce',
-            __('Quick Order 設定', 'quick-order'),
-            __('Quick Order 設定', 'quick-order'),
-            'manage_woocommerce',
-            'quick-order-settings',
-            [$this, 'renderSettingsPage']
-        );
     }
 
     public function registerSettings()
@@ -65,29 +57,46 @@ class Admin
 
     public function renderApiKeyField()
     {
+        $constantKey = Config::apiKeyFromConstant();
+        if ($constantKey) {
+            $masked = str_repeat('*', strlen($constantKey));
+            echo '<input type="text" value="' . esc_attr($masked) . '" class="regular-text" disabled>';
+            echo '<p class="description">' . esc_html__('API Key 已透過常數 QUICK_ORDER_API_KEY 設定', 'quick-order') . '</p>';
+            return;
+        }
+
         $value = get_option('quick_order_api_key', '');
         echo '<input type="text" name="quick_order_api_key" value="' . esc_attr($value) . '" class="regular-text">';
-    }
-
-    public function renderSettingsPage()
-    {
-        echo '<div class="wrap">';
-        echo '<h1>' . esc_html__('Quick Order 設定', 'quick-order') . '</h1>';
-        echo '<form method="post" action="options.php">';
-        settings_fields('quick_order_settings');
-        do_settings_sections('quick-order-settings');
-        submit_button();
-        echo '</form>';
-        echo '</div>';
     }
 
     public function renderPage()
     {
         $this->enqueueAssets();
-        echo '<div class="wrap"><h1>' . esc_html__('Quick Order', 'quick-order') . '</h1>';
-        echo '<div id="quick-order-app">';
-        $this->renderForm();
-        echo '</div></div>';
+        ?>
+        <div class="wrap">
+            <h1><?php echo esc_html__('Quick Order', 'quick-order'); ?></h1>
+            <nav class="nav-tab-wrapper">
+                <a href="#tab-order" class="nav-tab nav-tab-active" data-tab="tab-order"><?php esc_html_e('建立訂單', 'quick-order'); ?></a>
+                <a href="#tab-settings" class="nav-tab" data-tab="tab-settings"><?php esc_html_e('設定', 'quick-order'); ?></a>
+            </nav>
+            <div id="tab-order" class="qo-tab-panel">
+                <div class="qo-card">
+                    <?php $this->renderForm(); ?>
+                </div>
+            </div>
+            <div id="tab-settings" class="qo-tab-panel" style="display:none;">
+                <div class="qo-card">
+                    <form method="post" action="options.php">
+                        <?php
+                        settings_fields('quick_order_settings');
+                        do_settings_sections('quick-order-settings');
+                        submit_button();
+                        ?>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <?php
     }
 
     public function renderForm()

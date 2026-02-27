@@ -105,7 +105,7 @@ class RestApi
 
         $apiKey = $request->get_header('X-API-Key');
         if ($apiKey) {
-            $storedKey = get_option('quick_order_api_key');
+            $storedKey = Config::apiKey();
             if ($storedKey && hash_equals($storedKey, $apiKey)) {
                 return true;
             }

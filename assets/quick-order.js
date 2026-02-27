@@ -1,6 +1,18 @@
 (function ($) {
     'use strict';
 
+    // Tab switching
+    $(document).on('click', '.nav-tab[data-tab]', function (e) {
+        e.preventDefault();
+        var tab = $(this).data('tab');
+
+        $('.nav-tab[data-tab]').removeClass('nav-tab-active');
+        $(this).addClass('nav-tab-active');
+
+        $('.qo-tab-panel').hide();
+        $('#' + tab).show();
+    });
+
     $(document).on('submit', '#quick-order-form', function (e) {
         e.preventDefault();
 
