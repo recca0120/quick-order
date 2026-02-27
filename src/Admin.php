@@ -15,6 +15,7 @@ class Admin
     public function register()
     {
         add_action('admin_menu', [$this, 'addMenu']);
+        add_action('admin_init', [$this, 'registerSettings']);
         add_action('wp_ajax_quick_order_create', [$this, 'ajaxCreateOrder']);
     }
 
@@ -28,6 +29,56 @@ class Admin
             'quick-order',
             [$this, 'renderPage']
         );
+
+        add_submenu_page(
+            'woocommerce',
+            __('Quick Order 設定', 'quick-order'),
+            __('Quick Order 設定', 'quick-order'),
+            'manage_woocommerce',
+            'quick-order-settings',
+            [$this, 'renderSettingsPage']
+        );
+    }
+
+    public function registerSettings()
+    {
+        register_setting('quick_order_settings', 'quick_order_api_key', [
+            'type' => 'string',
+            'sanitize_callback' => 'sanitize_text_field',
+        ]);
+
+        add_settings_section(
+            'quick_order_api_section',
+            __('API 設定', 'quick-order'),
+            null,
+            'quick-order-settings'
+        );
+
+        add_settings_field(
+            'quick_order_api_key',
+            __('API Key', 'quick-order'),
+            [$this, 'renderApiKeyField'],
+            'quick-order-settings',
+            'quick_order_api_section'
+        );
+    }
+
+    public function renderApiKeyField()
+    {
+        $value = get_option('quick_order_api_key', '');
+        echo '<input type="text" name="quick_order_api_key" value="' . esc_attr($value) . '" class="regular-text">';
+    }
+
+    public function renderSettingsPage()
+    {
+        echo '<div class="wrap">';
+        echo '<h1>' . esc_html__('Quick Order 設定', 'quick-order') . '</h1>';
+        echo '<form method="post" action="options.php">';
+        settings_fields('quick_order_settings');
+        do_settings_sections('quick-order-settings');
+        submit_button();
+        echo '</form>';
+        echo '</div>';
     }
 
     public function renderPage()

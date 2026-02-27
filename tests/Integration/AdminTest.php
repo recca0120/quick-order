@@ -87,6 +87,42 @@ class AdminTest extends WP_Ajax_UnitTestCase
         $this->assertFalse($response['success']);
     }
 
+    public function test_settings_are_registered()
+    {
+        do_action('admin_init');
+
+        global $wp_registered_settings;
+        $this->assertArrayHasKey('quick_order_api_key', $wp_registered_settings);
+    }
+
+    public function test_settings_page_renders_api_key_field()
+    {
+        do_action('admin_init');
+
+        ob_start();
+        $this->admin->renderSettingsPage();
+        $html = ob_get_clean();
+
+        $this->assertStringContainsString('quick_order_api_key', $html);
+    }
+
+    public function test_settings_menu_is_registered()
+    {
+        do_action('admin_menu');
+
+        global $submenu;
+        $found = false;
+        if (isset($submenu['woocommerce'])) {
+            foreach ($submenu['woocommerce'] as $item) {
+                if ($item[2] === 'quick-order-settings') {
+                    $found = true;
+                    break;
+                }
+            }
+        }
+        $this->assertTrue($found, 'Quick Order Settings submenu should be registered under WooCommerce');
+    }
+
     private function captureAjax(callable $callback): array
     {
         if (! defined('DOING_AJAX')) {
