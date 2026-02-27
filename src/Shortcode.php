@@ -4,12 +4,12 @@ namespace Suspended\QuickOrder;
 
 class Shortcode
 {
-    /** @var Admin */
-    private $admin;
+    /** @var OrderForm */
+    private $orderForm;
 
-    public function __construct(Admin $admin)
+    public function __construct(OrderForm $orderForm)
     {
-        $this->admin = $admin;
+        $this->orderForm = $orderForm;
     }
 
     public function register()
@@ -23,24 +23,13 @@ class Shortcode
             return '';
         }
 
-        $this->enqueueAssets();
+        $this->orderForm->enqueueAssets();
 
         ob_start();
         echo '<div id="quick-order-app" class="quick-order-frontend">';
-        $this->admin->renderForm();
+        $this->orderForm->render();
         echo '</div>';
 
         return ob_get_clean();
-    }
-
-    private function enqueueAssets()
-    {
-        $pluginUrl = plugin_dir_url(dirname(__FILE__));
-
-        wp_enqueue_style('quick-order', $pluginUrl . 'assets/quick-order.css', [], '1.0.0');
-        wp_enqueue_script('quick-order', $pluginUrl . 'assets/quick-order.js', ['jquery'], '1.0.0', true);
-        wp_localize_script('quick-order', 'quickOrder', [
-            'ajaxUrl' => admin_url('admin-ajax.php'),
-        ]);
     }
 }

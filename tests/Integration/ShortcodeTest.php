@@ -2,8 +2,7 @@
 
 namespace Suspended\QuickOrder\Tests\Integration;
 
-use Suspended\QuickOrder\Admin;
-use Suspended\QuickOrder\OrderService;
+use Suspended\QuickOrder\OrderForm;
 use Suspended\QuickOrder\Shortcode;
 use WP_UnitTestCase;
 
@@ -15,8 +14,8 @@ class ShortcodeTest extends WP_UnitTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $admin = new Admin(new OrderService());
-        $this->shortcode = new Shortcode($admin);
+        $orderForm = new OrderForm();
+        $this->shortcode = new Shortcode($orderForm);
         $this->shortcode->register();
     }
 

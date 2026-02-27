@@ -141,7 +141,7 @@ class RestApiTest extends WP_UnitTestCase
 
     public function test_api_key_from_constant_grants_access()
     {
-        add_filter('quick_order_api_key_from_constant', function () {
+        add_filter('quick_order_api_key_override', function () {
             return 'constant-key-999';
         });
         delete_option('quick_order_api_key');
@@ -155,13 +155,13 @@ class RestApiTest extends WP_UnitTestCase
 
         $this->assertEquals(201, $response->get_status());
 
-        remove_all_filters('quick_order_api_key_from_constant');
+        remove_all_filters('quick_order_api_key_override');
     }
 
     public function test_constant_api_key_takes_precedence_over_option()
     {
         update_option('quick_order_api_key', 'option-key');
-        add_filter('quick_order_api_key_from_constant', function () {
+        add_filter('quick_order_api_key_override', function () {
             return 'constant-key';
         });
         wp_set_current_user(0);
@@ -174,7 +174,7 @@ class RestApiTest extends WP_UnitTestCase
 
         $this->assertEquals(403, $response->get_status(), 'Option key should not work when constant is set');
 
-        remove_all_filters('quick_order_api_key_from_constant');
+        remove_all_filters('quick_order_api_key_override');
     }
 
     // ── GET /orders/{id} ──

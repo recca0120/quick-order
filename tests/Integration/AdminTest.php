@@ -39,10 +39,12 @@ class AdminTest extends WP_Ajax_UnitTestCase
         $this->assertTrue($found, 'Quick Order submenu should be registered under WooCommerce');
     }
 
-    public function test_render_form_contains_required_fields()
+    public function test_render_page_contains_order_form()
     {
+        do_action('admin_init');
+
         ob_start();
-        $this->admin->renderForm();
+        $this->admin->renderPage();
         $html = ob_get_clean();
 
         $this->assertStringContainsString('qo-amount', $html);
@@ -148,7 +150,7 @@ class AdminTest extends WP_Ajax_UnitTestCase
         do_action('admin_init');
 
         // Simulate constant by setting filter
-        add_filter('quick_order_api_key_from_constant', function () {
+        add_filter('quick_order_api_key_override', function () {
             return 'secret-from-config';
         });
 
@@ -159,7 +161,7 @@ class AdminTest extends WP_Ajax_UnitTestCase
         $this->assertStringContainsString('disabled', $html);
         $this->assertStringContainsString('*', $html);
 
-        remove_all_filters('quick_order_api_key_from_constant');
+        remove_all_filters('quick_order_api_key_override');
     }
 
     public function test_no_separate_settings_menu()

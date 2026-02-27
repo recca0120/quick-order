@@ -32,11 +32,12 @@ add_action('plugins_loaded', function () {
     }
 
     $orderService = new Suspended\QuickOrder\OrderService();
+    $orderForm = new Suspended\QuickOrder\OrderForm();
 
-    $admin = new Suspended\QuickOrder\Admin($orderService);
+    $admin = new Suspended\QuickOrder\Admin($orderService, $orderForm);
     $admin->register();
 
-    $shortcode = new Suspended\QuickOrder\Shortcode($admin);
+    $shortcode = new Suspended\QuickOrder\Shortcode($orderForm);
     $shortcode->register();
 
     $restApi = new Suspended\QuickOrder\RestApi($orderService);
