@@ -1,10 +1,6 @@
-.qo-card {
-    background: #fff;
-    border: 1px solid #c3c4c7;
-    border-radius: 4px;
-    padding: 24px;
+.qo-tab-panel .card {
+    max-width: none;
     margin-top: 20px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .qo-tab-panel {

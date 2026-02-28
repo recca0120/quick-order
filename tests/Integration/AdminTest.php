@@ -119,7 +119,7 @@ class AdminTest extends WP_Ajax_UnitTestCase
         $this->admin->renderPage();
         $html = ob_get_clean();
 
-        $this->assertStringContainsString('qo-card', $html);
+        $this->assertStringContainsString('class="card"', $html);
     }
 
     public function test_render_page_contains_form_and_settings()

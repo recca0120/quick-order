@@ -84,11 +84,11 @@ class Admin
                 <a href="#tab-settings" class="nav-tab" data-tab="tab-settings"><?php esc_html_e('設定', 'quick-order'); ?></a>
             </nav>
             <div id="tab-order" class="qo-tab-panel">
-                <div class="qo-card">
+                <div class="card">
                     <?php $this->orderForm->render(); ?>
                 </div>
                 <div id="quick-order-result" class="quick-order-result" style="display:none;">
-                    <div class="qo-card">
+                    <div class="card">
                         <div class="notice notice-success">
                             <p><?php esc_html_e('訂單建立成功！', 'quick-order'); ?></p>
                         </div>
@@ -105,7 +105,7 @@ class Admin
                 </div>
             </div>
             <div id="tab-settings" class="qo-tab-panel" style="display:none;">
-                <div class="qo-card">
+                <div class="card">
                     <form method="post" action="options.php">
                         <?php
                         settings_fields('quick_order_settings');
