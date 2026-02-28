@@ -18,9 +18,9 @@ class RestApiTest extends WP_UnitTestCase
         parent::setUp();
 
         global $wp_rest_server;
-        $wp_rest_server = new WP_REST_Server();
+        $wp_rest_server = new WP_REST_Server;
 
-        $this->orderService = new OrderService();
+        $this->orderService = new OrderService;
         $restApi = new RestApi($this->orderService);
         $restApi->register();
 
@@ -185,7 +185,7 @@ class RestApiTest extends WP_UnitTestCase
 
         $order = $this->orderService->createOrder(200, '測試商品');
 
-        $request = new WP_REST_Request('GET', '/quick-order/v1/orders/' . $order->get_id());
+        $request = new WP_REST_Request('GET', '/quick-order/v1/orders/'.$order->get_id());
         $response = rest_do_request($request);
 
         $this->assertEquals(200, $response->get_status());
@@ -214,7 +214,7 @@ class RestApiTest extends WP_UnitTestCase
 
         $order = $this->orderService->createOrder(300);
 
-        $request = new WP_REST_Request('PUT', '/quick-order/v1/orders/' . $order->get_id() . '/status');
+        $request = new WP_REST_Request('PUT', '/quick-order/v1/orders/'.$order->get_id().'/status');
         $request->set_param('status', 'processing');
         $request->set_param('note', '已收到款項');
 
@@ -231,7 +231,7 @@ class RestApiTest extends WP_UnitTestCase
 
         $order = $this->orderService->createOrder(100);
 
-        $request = new WP_REST_Request('PUT', '/quick-order/v1/orders/' . $order->get_id() . '/status');
+        $request = new WP_REST_Request('PUT', '/quick-order/v1/orders/'.$order->get_id().'/status');
 
         $response = rest_do_request($request);
 
@@ -299,7 +299,7 @@ class RestApiTest extends WP_UnitTestCase
         $order = $this->orderService->createOrder(100);
         wp_set_current_user(0);
 
-        $request = new WP_REST_Request('GET', '/quick-order/v1/orders/' . $order->get_id());
+        $request = new WP_REST_Request('GET', '/quick-order/v1/orders/'.$order->get_id());
         $request->set_header('X-API-Key', $apiKey);
 
         $response = rest_do_request($request);
@@ -318,7 +318,7 @@ class RestApiTest extends WP_UnitTestCase
         $order = $this->orderService->createOrder(100);
         wp_set_current_user(0);
 
-        $request = new WP_REST_Request('PUT', '/quick-order/v1/orders/' . $order->get_id() . '/status');
+        $request = new WP_REST_Request('PUT', '/quick-order/v1/orders/'.$order->get_id().'/status');
         $request->set_header('X-API-Key', $apiKey);
         $request->set_param('status', 'completed');
 

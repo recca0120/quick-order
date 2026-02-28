@@ -1,0 +1,5 @@
+pre-commit:
+  commands:
+    pint:
+      glob: "*.php"
+      run: pint {staged_files}

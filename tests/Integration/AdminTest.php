@@ -3,6 +3,7 @@
 namespace Suspended\QuickOrder\Tests\Integration;
 
 use Suspended\QuickOrder\Admin;
+use Suspended\QuickOrder\OrderForm;
 use Suspended\QuickOrder\OrderService;
 use WP_Ajax_UnitTestCase;
 
@@ -18,7 +19,7 @@ class AdminTest extends WP_Ajax_UnitTestCase
         $adminId = $this->factory->user->create(['role' => 'administrator']);
         wp_set_current_user($adminId);
 
-        $this->admin = new Admin(new OrderService());
+        $this->admin = new Admin(new OrderService, new OrderForm);
         $this->admin->register();
     }
 

@@ -15,7 +15,7 @@ class OrderService
 
         $order = wc_create_order();
 
-        $fee = new \WC_Order_Item_Fee();
+        $fee = new \WC_Order_Item_Fee;
         $fee->set_name($name);
         $fee->set_amount($amount);
         $fee->set_total($amount);
@@ -33,6 +33,16 @@ class OrderService
         return $order;
     }
 
+    public function getOrder($orderId)
+    {
+        $order = wc_get_order($orderId);
+        if (! $order) {
+            throw new \InvalidArgumentException('找不到訂單');
+        }
+
+        return $order;
+    }
+
     public function updateOrderStatus($orderId, $status, $note = '')
     {
         $order = wc_get_order($orderId);
@@ -44,15 +54,5 @@ class OrderService
         $order->save();
 
         return $order;
-    }
-
-    public function getPaymentUrl($orderId)
-    {
-        $order = wc_get_order($orderId);
-        if (! $order) {
-            throw new \InvalidArgumentException('找不到訂單');
-        }
-
-        return $order->get_checkout_payment_url();
     }
 }

@@ -10,10 +10,10 @@ class Admin
     /** @var OrderForm */
     private $orderForm;
 
-    public function __construct(OrderService $orderService, OrderForm $orderForm = null)
+    public function __construct(OrderService $orderService, OrderForm $orderForm)
     {
         $this->orderService = $orderService;
-        $this->orderForm = $orderForm ?: new OrderForm();
+        $this->orderForm = $orderForm;
     }
 
     public function register()
@@ -63,13 +63,14 @@ class Admin
         $constantKey = Config::apiKeyFromConstant();
         if ($constantKey) {
             $masked = str_repeat('*', strlen($constantKey));
-            echo '<input type="text" value="' . esc_attr($masked) . '" class="regular-text" disabled>';
-            echo '<p class="description">' . esc_html__('API Key 已透過常數 QUICK_ORDER_API_KEY 設定', 'quick-order') . '</p>';
+            echo '<input type="text" value="'.esc_attr($masked).'" class="regular-text" disabled>';
+            echo '<p class="description">'.esc_html__('API Key 已透過常數 QUICK_ORDER_API_KEY 設定', 'quick-order').'</p>';
+
             return;
         }
 
         $value = get_option('quick_order_api_key', '');
-        echo '<input type="text" name="quick_order_api_key" value="' . esc_attr($value) . '" class="regular-text">';
+        echo '<input type="text" name="quick_order_api_key" value="'.esc_attr($value).'" class="regular-text">';
     }
 
     public function renderPage()
@@ -92,9 +93,9 @@ class Admin
                     <form method="post" action="options.php">
                         <?php
                         settings_fields('quick_order_settings');
-                        do_settings_sections('quick-order-settings');
-                        submit_button();
-                        ?>
+        do_settings_sections('quick-order-settings');
+        submit_button();
+        ?>
                     </form>
                 </div>
             </div>

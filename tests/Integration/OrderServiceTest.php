@@ -13,7 +13,7 @@ class OrderServiceTest extends WP_UnitTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new OrderService();
+        $this->service = new OrderService;
     }
 
     public function test_create_order_with_amount()
@@ -48,7 +48,9 @@ class OrderServiceTest extends WP_UnitTestCase
         $order = $this->service->createOrder(300, '', '客戶備註');
 
         $notes = wc_get_order_notes(['order_id' => $order->get_id()]);
-        $noteContents = array_map(function ($n) { return $n->content; }, $notes);
+        $noteContents = array_map(function ($n) {
+            return $n->content;
+        }, $notes);
         $this->assertContains('客戶備註', $noteContents);
     }
 
@@ -72,9 +74,13 @@ class OrderServiceTest extends WP_UnitTestCase
 
         $this->assertEquals('processing', $updated->get_status());
         $notes = wc_get_order_notes(['order_id' => $updated->get_id()]);
-        $noteContents = array_map(function ($n) { return $n->content; }, $notes);
+        $noteContents = array_map(function ($n) {
+            return $n->content;
+        }, $notes);
         $this->assertTrue(
-            count(array_filter($noteContents, function ($c) { return strpos($c, '已付款') !== false; })) > 0
+            count(array_filter($noteContents, function ($c) {
+                return strpos($c, '已付款') !== false;
+            })) > 0
         );
     }
 
@@ -84,19 +90,19 @@ class OrderServiceTest extends WP_UnitTestCase
         $this->service->updateOrderStatus(999999, 'completed');
     }
 
-    public function test_get_payment_url()
+    public function test_get_order_returns_order()
     {
-        $order = $this->service->createOrder(100);
+        $created = $this->service->createOrder(150);
 
-        $url = $this->service->getPaymentUrl($order->get_id());
+        $order = $this->service->getOrder($created->get_id());
 
-        $this->assertStringContainsString('order-pay', $url);
-        $this->assertStringContainsString((string) $order->get_id(), $url);
+        $this->assertInstanceOf(\WC_Order::class, $order);
+        $this->assertEquals($created->get_id(), $order->get_id());
     }
 
-    public function test_get_payment_url_with_invalid_id()
+    public function test_get_order_with_invalid_id_throws()
     {
         $this->expectException(\InvalidArgumentException::class);
-        $this->service->getPaymentUrl(999999);
+        $this->service->getOrder(999999);
     }
 }

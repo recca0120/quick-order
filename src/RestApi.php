@@ -28,7 +28,9 @@ class RestApi
                     'amount' => [
                         'required' => true,
                         'type' => 'number',
-                        'sanitize_callback' => function ($value) { return floatval($value); },
+                        'sanitize_callback' => function ($value) {
+                            return floatval($value);
+                        },
                     ],
                     'name' => [
                         'required' => false,
@@ -131,12 +133,13 @@ class RestApi
 
     public function getOrder($request)
     {
-        $order = wc_get_order($request->get_param('id'));
-        if (! $order) {
-            return new \WP_Error('order_not_found', '找不到訂單', ['status' => 404]);
-        }
+        try {
+            $order = $this->orderService->getOrder($request->get_param('id'));
 
-        return new \WP_REST_Response($this->formatOrder($order));
+            return new \WP_REST_Response($this->formatOrder($order));
+        } catch (\InvalidArgumentException $e) {
+            return new \WP_Error('order_not_found', $e->getMessage(), ['status' => 404]);
+        }
     }
 
     public function updateStatus($request)
@@ -165,7 +168,7 @@ class RestApi
 
         $status = $request->get_param('status');
         if ($status) {
-            $args['status'] = 'wc-' . $status;
+            $args['status'] = 'wc-'.$status;
         }
 
         $orders = wc_get_orders($args);
