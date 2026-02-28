@@ -14,7 +14,7 @@ class ShortcodeTest extends WP_UnitTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $orderForm = new OrderForm();
+        $orderForm = new OrderForm;
         $this->shortcode = new Shortcode($orderForm);
         $this->shortcode->register();
     }

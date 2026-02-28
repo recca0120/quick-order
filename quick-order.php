@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Plugin Name: WooCommerce Quick Order
  * Description: 快速建立指定金額的 WooCommerce 訂單。
@@ -7,7 +8,6 @@
  * Text Domain: quick-order
  * Requires Plugins: woocommerce
  */
-
 if (! defined('ABSPATH')) {
     exit;
 }
@@ -19,7 +19,7 @@ spl_autoload_register(function ($class) {
     }
 
     $relativeClass = substr($class, strlen($prefix));
-    $file = __DIR__ . '/src/' . str_replace('\\', '/', $relativeClass) . '.php';
+    $file = __DIR__.'/src/'.str_replace('\\', '/', $relativeClass).'.php';
 
     if (file_exists($file)) {
         require $file;
@@ -31,8 +31,8 @@ add_action('plugins_loaded', function () {
         return;
     }
 
-    $orderService = new Suspended\QuickOrder\OrderService();
-    $orderForm = new Suspended\QuickOrder\OrderForm();
+    $orderService = new Suspended\QuickOrder\OrderService;
+    $orderForm = new Suspended\QuickOrder\OrderForm;
 
     $admin = new Suspended\QuickOrder\Admin($orderService, $orderForm);
     $admin->register();

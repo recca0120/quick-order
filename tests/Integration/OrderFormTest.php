@@ -9,7 +9,7 @@ class OrderFormTest extends WP_UnitTestCase
 {
     public function test_render_contains_required_fields()
     {
-        $form = new OrderForm();
+        $form = new OrderForm;
 
         ob_start();
         $form->render();

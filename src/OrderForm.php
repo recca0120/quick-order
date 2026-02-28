@@ -8,8 +8,8 @@ class OrderForm
     {
         $pluginUrl = plugin_dir_url(dirname(__FILE__));
 
-        wp_enqueue_style('quick-order', $pluginUrl . 'assets/quick-order.css', [], '1.0.0');
-        wp_enqueue_script('quick-order', $pluginUrl . 'assets/quick-order.js', ['jquery'], '1.0.0', true);
+        wp_enqueue_style('quick-order', $pluginUrl.'assets/quick-order.css', [], '1.0.0');
+        wp_enqueue_script('quick-order', $pluginUrl.'assets/quick-order.js', ['jquery'], '1.0.0', true);
         wp_localize_script('quick-order', 'quickOrder', [
             'ajaxUrl' => admin_url('admin-ajax.php'),
         ]);

@@ -14,20 +14,23 @@ class AbstractUpdateOrderTest extends WP_UnitTestCase
 {
     public function test_updates_order_status_from_callback()
     {
-        $orderService = new OrderService();
+        $orderService = new OrderService;
         $order = $orderService->createOrder(200);
         $orderId = $order->get_id();
 
-        $middleware = new class($orderService) extends AbstractUpdateOrder {
+        $middleware = new class($orderService) extends AbstractUpdateOrder
+        {
             protected function extractOrderId(ServerRequestInterface $request, ResponseInterface $response)
             {
                 $body = json_decode((string) $request->getBody(), true);
+
                 return $body['order_id'] ?? null;
             }
 
             protected function extractStatus(ServerRequestInterface $request, ResponseInterface $response)
             {
                 $body = json_decode((string) $request->getBody(), true);
+
                 return $body['status'] ?? null;
             }
         };
@@ -49,9 +52,10 @@ class AbstractUpdateOrderTest extends WP_UnitTestCase
 
     public function test_skips_update_when_order_id_is_null()
     {
-        $orderService = new OrderService();
+        $orderService = new OrderService;
 
-        $middleware = new class($orderService) extends AbstractUpdateOrder {
+        $middleware = new class($orderService) extends AbstractUpdateOrder
+        {
             protected function extractOrderId(ServerRequestInterface $request, ResponseInterface $response)
             {
                 return null;

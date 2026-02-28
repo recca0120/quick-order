@@ -15,9 +15,9 @@ abstract class AbstractCreateOrder implements MiddlewareInterface
     /** @var OrderService */
     protected $orderService;
 
-    public function __construct(OrderService $orderService = null)
+    public function __construct(?OrderService $orderService = null)
     {
-        $this->orderService = $orderService ?: new OrderService();
+        $this->orderService = $orderService ?: new OrderService;
     }
 
     public function process(ServerRequestInterface $request, callable $next): ResponseInterface

@@ -22,7 +22,7 @@ if (! defined('ABSPATH')) {
 
     if (! $wp_core_dir) {
         $plugin_dir = dirname(__DIR__);
-        $local_wp = $plugin_dir . '/.wordpress-test/wordpress';
+        $local_wp = $plugin_dir.'/.wordpress-test/wordpress';
         if (is_dir($local_wp)) {
             $wp_core_dir = $local_wp;
         } else {
@@ -30,11 +30,11 @@ if (! defined('ABSPATH')) {
         }
     }
 
-    define('ABSPATH', rtrim($wp_core_dir, '/') . '/');
+    define('ABSPATH', rtrim($wp_core_dir, '/').'/');
 }
 
 if (! defined('WP_CONTENT_DIR')) {
-    define('WP_CONTENT_DIR', ABSPATH . 'wp-content');
+    define('WP_CONTENT_DIR', ABSPATH.'wp-content');
 }
 
 define('DB_ENGINE', getenv('DB_ENGINE') ?: 'mysql');
@@ -50,8 +50,8 @@ if (DB_ENGINE === 'sqlite') {
     define('DB_FILE', $db_file);
     define('DB_DIR', $db_dir);
 
-    $db_dropin_source = WP_CONTENT_DIR . '/plugins/sqlite-database-integration/wp-includes/sqlite/db.php';
-    $db_dropin_target = WP_CONTENT_DIR . '/db.php';
+    $db_dropin_source = WP_CONTENT_DIR.'/plugins/sqlite-database-integration/wp-includes/sqlite/db.php';
+    $db_dropin_target = WP_CONTENT_DIR.'/db.php';
 
     if (! file_exists($db_dropin_target)) {
         @symlink($db_dropin_source, $db_dropin_target);

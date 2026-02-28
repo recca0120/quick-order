@@ -14,12 +14,14 @@ class AbstractCreateOrderTest extends WP_UnitTestCase
 {
     public function test_creates_order_and_injects_into_request()
     {
-        $middleware = new class(new OrderService()) extends AbstractCreateOrder {
+        $middleware = new class(new OrderService) extends AbstractCreateOrder
+        {
             public $capturedRequest;
 
             protected function extractOrderData(ServerRequestInterface $request): array
             {
                 $body = json_decode((string) $request->getBody(), true);
+
                 return ['amount' => $body['amount'], 'name' => $body['name'] ?? ''];
             }
 
@@ -28,6 +30,7 @@ class AbstractCreateOrderTest extends WP_UnitTestCase
                 $body = json_decode((string) $request->getBody(), true) ?: [];
                 $body['wc_order_id'] = $order->get_id();
                 $this->capturedRequest = $request->withBody(Stream::create(json_encode($body)));
+
                 return $this->capturedRequest;
             }
         };
