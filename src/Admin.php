@@ -87,6 +87,22 @@ class Admin
                 <div class="qo-card">
                     <?php $this->orderForm->render(); ?>
                 </div>
+                <div id="quick-order-result" class="quick-order-result" style="display:none;">
+                    <div class="qo-card">
+                        <div class="notice notice-success">
+                            <p><?php esc_html_e('訂單建立成功！', 'quick-order'); ?></p>
+                        </div>
+                        <p><?php esc_html_e('訂單編號：', 'quick-order'); ?><strong id="qo-order-id"></strong></p>
+                        <p>
+                            <?php esc_html_e('付款連結：', 'quick-order'); ?>
+                            <input type="text" id="qo-payment-url" class="large-text" readonly>
+                        </p>
+                        <p>
+                            <button type="button" id="qo-copy-url" class="button"><?php esc_html_e('複製連結', 'quick-order'); ?></button>
+                            <span id="qo-copy-success" style="display:none;color:green;"><?php esc_html_e('已複製！', 'quick-order'); ?></span>
+                        </p>
+                    </div>
+                </div>
             </div>
             <div id="tab-settings" class="qo-tab-panel" style="display:none;">
                 <div class="qo-card">
