@@ -44,6 +44,48 @@ class RestApi
                         'default' => '',
                         'sanitize_callback' => 'sanitize_textarea_field',
                     ],
+                    'email' => [
+                        'required' => false,
+                        'type' => 'string',
+                        'default' => '',
+                        'sanitize_callback' => 'sanitize_email',
+                    ],
+                    'first_name' => [
+                        'required' => false,
+                        'type' => 'string',
+                        'default' => '',
+                        'sanitize_callback' => 'sanitize_text_field',
+                    ],
+                    'last_name' => [
+                        'required' => false,
+                        'type' => 'string',
+                        'default' => '',
+                        'sanitize_callback' => 'sanitize_text_field',
+                    ],
+                    'phone' => [
+                        'required' => false,
+                        'type' => 'string',
+                        'default' => '',
+                        'sanitize_callback' => 'sanitize_text_field',
+                    ],
+                    'address_1' => [
+                        'required' => false,
+                        'type' => 'string',
+                        'default' => '',
+                        'sanitize_callback' => 'sanitize_text_field',
+                    ],
+                    'city' => [
+                        'required' => false,
+                        'type' => 'string',
+                        'default' => '',
+                        'sanitize_callback' => 'sanitize_text_field',
+                    ],
+                    'postcode' => [
+                        'required' => false,
+                        'type' => 'string',
+                        'default' => '',
+                        'sanitize_callback' => 'sanitize_text_field',
+                    ],
                 ],
             ],
             [
@@ -119,10 +161,20 @@ class RestApi
     public function createOrder($request)
     {
         try {
+            $customerFields = ['email', 'first_name', 'last_name', 'phone', 'address_1', 'city', 'postcode'];
+            $customer = [];
+            foreach ($customerFields as $field) {
+                $value = $request->get_param($field);
+                if ($value !== '' && $value !== null) {
+                    $customer[$field] = $value;
+                }
+            }
+
             $order = $this->orderService->createOrder(
                 $request->get_param('amount'),
                 $request->get_param('name'),
-                $request->get_param('note')
+                $request->get_param('note'),
+                $customer
             );
 
             return new \WP_REST_Response($this->formatOrder($order), 201);

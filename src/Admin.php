@@ -56,6 +56,37 @@ class Admin
             'quick-order-settings',
             'quick_order_api_section'
         );
+
+        register_setting('quick_order_settings', 'quick_order_auto_create_customer', [
+            'type' => 'string',
+            'default' => 'yes',
+            'sanitize_callback' => function ($value) {
+                return $value === 'yes' ? 'yes' : 'no';
+            },
+        ]);
+
+        add_settings_section(
+            'quick_order_customer_section',
+            __('客戶設定', 'quick-order'),
+            null,
+            'quick-order-settings'
+        );
+
+        add_settings_field(
+            'quick_order_auto_create_customer',
+            __('自動建立帳號', 'quick-order'),
+            [$this, 'renderAutoCreateCustomerField'],
+            'quick-order-settings',
+            'quick_order_customer_section'
+        );
+    }
+
+    public function renderAutoCreateCustomerField()
+    {
+        $value = get_option('quick_order_auto_create_customer', 'yes');
+        echo '<label><input type="checkbox" name="quick_order_auto_create_customer" value="yes"' . checked($value, 'yes', false) . '>';
+        esc_html_e('當客戶 Email 不存在時自動建立帳號', 'quick-order');
+        echo '</label>';
     }
 
     public function renderApiKeyField()
@@ -128,10 +159,20 @@ class Admin
         }
 
         try {
+            $customerFields = ['email', 'first_name', 'last_name', 'phone', 'address_1', 'city', 'postcode'];
+            $customer = [];
+            foreach ($customerFields as $field) {
+                if (isset($_POST[$field]) && $_POST[$field] !== '') {
+                    $value = wp_unslash($_POST[$field]);
+                    $customer[$field] = $field === 'email' ? sanitize_email($value) : sanitize_text_field($value);
+                }
+            }
+
             $order = $this->orderService->createOrder(
                 isset($_POST['amount']) ? floatval($_POST['amount']) : 0,
                 isset($_POST['name']) ? sanitize_text_field(wp_unslash($_POST['name'])) : '',
-                isset($_POST['note']) ? sanitize_textarea_field(wp_unslash($_POST['note'])) : ''
+                isset($_POST['note']) ? sanitize_textarea_field(wp_unslash($_POST['note'])) : '',
+                $customer
             );
 
             wp_send_json_success([

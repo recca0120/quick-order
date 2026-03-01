@@ -105,4 +105,84 @@ class OrderServiceTest extends WP_UnitTestCase
         $this->expectException(\InvalidArgumentException::class);
         $this->service->getOrder(999999);
     }
+
+    // ── 客戶資料 ──
+
+    public function test_create_order_with_customer_billing_fields()
+    {
+        $customer = [
+            'email' => 'test@example.com',
+            'first_name' => 'John',
+            'last_name' => 'Doe',
+            'phone' => '0912345678',
+            'address_1' => '台北市信義區',
+            'city' => '台北市',
+            'postcode' => '110',
+        ];
+
+        $order = $this->service->createOrder(100, '', '', $customer);
+
+        $this->assertEquals('test@example.com', $order->get_billing_email());
+        $this->assertEquals('John', $order->get_billing_first_name());
+        $this->assertEquals('Doe', $order->get_billing_last_name());
+        $this->assertEquals('0912345678', $order->get_billing_phone());
+        $this->assertEquals('台北市信義區', $order->get_billing_address_1());
+        $this->assertEquals('台北市', $order->get_billing_city());
+        $this->assertEquals('110', $order->get_billing_postcode());
+    }
+
+    public function test_create_order_auto_creates_customer_when_email_not_exists()
+    {
+        update_option('quick_order_auto_create_customer', 'yes');
+
+        $customer = [
+            'email' => 'newuser_' . wp_generate_password(4, false) . '@example.com',
+            'first_name' => 'New',
+            'last_name' => 'User',
+        ];
+
+        $order = $this->service->createOrder(100, '', '', $customer);
+
+        $this->assertGreaterThan(0, $order->get_customer_id());
+        $user = get_user_by('id', $order->get_customer_id());
+        $this->assertEquals($customer['email'], $user->user_email);
+    }
+
+    public function test_create_order_does_not_create_customer_when_auto_create_disabled()
+    {
+        update_option('quick_order_auto_create_customer', 'no');
+
+        $customer = [
+            'email' => 'noauto_' . wp_generate_password(4, false) . '@example.com',
+            'first_name' => 'No',
+            'last_name' => 'Auto',
+        ];
+
+        $order = $this->service->createOrder(100, '', '', $customer);
+
+        $this->assertEquals(0, $order->get_customer_id());
+        $this->assertEquals($customer['email'], $order->get_billing_email());
+    }
+
+    public function test_create_order_links_existing_customer_by_email()
+    {
+        $userId = self::factory()->user->create(['user_email' => 'existing@example.com']);
+
+        $customer = [
+            'email' => 'existing@example.com',
+            'first_name' => 'Exist',
+            'last_name' => 'User',
+        ];
+
+        $order = $this->service->createOrder(100, '', '', $customer);
+
+        $this->assertEquals($userId, $order->get_customer_id());
+    }
+
+    public function test_create_order_without_email_remains_guest()
+    {
+        $order = $this->service->createOrder(100, '', '', []);
+
+        $this->assertEquals(0, $order->get_customer_id());
+    }
 }

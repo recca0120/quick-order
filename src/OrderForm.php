@@ -22,6 +22,34 @@ class OrderForm
             <?php wp_nonce_field('quick_order_create', 'quick_order_nonce'); ?>
             <table class="form-table">
                 <tr>
+                    <th><label for="qo-email"><?php esc_html_e('Email', 'quick-order'); ?> <span class="required">*</span></label></th>
+                    <td><input type="email" id="qo-email" name="email" class="regular-text"></td>
+                </tr>
+                <tr>
+                    <th><label for="qo-first-name"><?php esc_html_e('名字', 'quick-order'); ?></label></th>
+                    <td><input type="text" id="qo-first-name" name="first_name" class="regular-text"></td>
+                </tr>
+                <tr>
+                    <th><label for="qo-last-name"><?php esc_html_e('姓氏', 'quick-order'); ?></label></th>
+                    <td><input type="text" id="qo-last-name" name="last_name" class="regular-text"></td>
+                </tr>
+                <tr>
+                    <th><label for="qo-phone"><?php esc_html_e('電話', 'quick-order'); ?></label></th>
+                    <td><input type="tel" id="qo-phone" name="phone" class="regular-text"></td>
+                </tr>
+                <tr>
+                    <th><label for="qo-address"><?php esc_html_e('地址', 'quick-order'); ?></label></th>
+                    <td><input type="text" id="qo-address" name="address_1" class="regular-text"></td>
+                </tr>
+                <tr>
+                    <th><label for="qo-city"><?php esc_html_e('城市', 'quick-order'); ?></label></th>
+                    <td><input type="text" id="qo-city" name="city" class="regular-text"></td>
+                </tr>
+                <tr>
+                    <th><label for="qo-postcode"><?php esc_html_e('郵遞區號', 'quick-order'); ?></label></th>
+                    <td><input type="text" id="qo-postcode" name="postcode" class="regular-text"></td>
+                </tr>
+                <tr>
                     <th><label for="qo-amount"><?php esc_html_e('金額', 'quick-order'); ?> <span class="required">*</span></label></th>
                     <td><input type="number" id="qo-amount" name="amount" step="0.01" min="0.01" required class="regular-text"></td>
                 </tr>

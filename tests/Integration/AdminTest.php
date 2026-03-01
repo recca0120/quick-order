@@ -165,6 +165,85 @@ class AdminTest extends WP_Ajax_UnitTestCase
         remove_all_filters('quick_order_api_key_override');
     }
 
+    public function test_ajax_create_order_with_customer_data()
+    {
+        $nonce = wp_create_nonce('quick_order_create');
+        $_POST['quick_order_nonce'] = $nonce;
+        $_REQUEST['quick_order_nonce'] = $nonce;
+        $_POST['amount'] = '500';
+        $_POST['name'] = '';
+        $_POST['note'] = '';
+        $_POST['email'] = 'ajax-customer@example.com';
+        $_POST['first_name'] = 'Ajax';
+        $_POST['last_name'] = 'Test';
+        $_POST['phone'] = '0911111111';
+        $_POST['address_1'] = '中正路100號';
+        $_POST['city'] = '高雄市';
+        $_POST['postcode'] = '800';
+
+        $response = $this->captureAjax(function () {
+            $this->admin->ajaxCreateOrder();
+        });
+
+        $this->assertTrue($response['success']);
+        $order = wc_get_order($response['data']['order_id']);
+        $this->assertEquals('ajax-customer@example.com', $order->get_billing_email());
+        $this->assertEquals('Ajax', $order->get_billing_first_name());
+        $this->assertEquals('0911111111', $order->get_billing_phone());
+    }
+
+    public function test_ajax_create_order_sanitizes_invalid_email()
+    {
+        $nonce = wp_create_nonce('quick_order_create');
+        $_POST['quick_order_nonce'] = $nonce;
+        $_REQUEST['quick_order_nonce'] = $nonce;
+        $_POST['amount'] = '100';
+        $_POST['name'] = '';
+        $_POST['note'] = '';
+        $_POST['email'] = 'not-a-valid-email';
+
+        $response = $this->captureAjax(function () {
+            $this->admin->ajaxCreateOrder();
+        });
+
+        $this->assertTrue($response['success']);
+        $order = wc_get_order($response['data']['order_id']);
+        // sanitize_email strips invalid email, so billing email should be empty
+        $this->assertEquals('', $order->get_billing_email());
+    }
+
+    public function test_auto_create_customer_setting_is_registered()
+    {
+        do_action('admin_init');
+
+        global $wp_registered_settings;
+        $this->assertArrayHasKey('quick_order_auto_create_customer', $wp_registered_settings);
+    }
+
+    public function test_render_page_contains_auto_create_customer_setting()
+    {
+        do_action('admin_init');
+
+        ob_start();
+        $this->admin->renderPage();
+        $html = ob_get_clean();
+
+        $this->assertStringContainsString('quick_order_auto_create_customer', $html);
+    }
+
+    public function test_auto_create_customer_setting_sanitizes_to_no_when_unchecked()
+    {
+        do_action('admin_init');
+
+        global $wp_registered_settings;
+        $sanitize = $wp_registered_settings['quick_order_auto_create_customer']['sanitize_callback'];
+
+        $this->assertEquals('yes', call_user_func($sanitize, 'yes'));
+        $this->assertEquals('no', call_user_func($sanitize, ''));
+        $this->assertEquals('no', call_user_func($sanitize, null));
+        $this->assertEquals('no', call_user_func($sanitize, 'anything'));
+    }
+
     public function test_no_separate_settings_menu()
     {
         do_action('admin_menu');
