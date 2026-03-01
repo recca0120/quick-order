@@ -10,6 +10,8 @@
 ## 功能特色
 
 - 後台管理介面快速建立訂單（金額、商品名稱、備註）
+- 客戶資訊收集（Email、姓名、電話、地址）並寫入帳單欄位
+- Email 已存在自動關聯既有帳號；不存在可自動建立帳號（可於設定控制）
 - 自動產生付款連結，支援一鍵複製
 - REST API 支援外部系統整合
 - Shortcode `[quick_order]` 可嵌入任意頁面
@@ -36,8 +38,8 @@
 
 啟用外掛後，前往 **WooCommerce → Quick Order**：
 
-- **建立訂單** — 輸入金額、商品名稱、備註，送出後取得付款連結
-- **設定** — 設定 API Key（用於 REST API 驗證）
+- **建立訂單** — 輸入客戶資料（Email、姓名、電話、地址）、金額、商品名稱、備註，送出後取得付款連結
+- **設定** — 設定 API Key（用於 REST API 驗證）、自動建立帳號開關
 
 ### Shortcode
 
@@ -64,6 +66,13 @@ POST /wp-json/quick-order/v1/orders
 | `amount` | number | ✓ | 訂單金額 |
 | `name` | string | | 商品名稱 |
 | `note` | string | | 備註 |
+| `email` | string | | 客戶 Email |
+| `first_name` | string | | 名字 |
+| `last_name` | string | | 姓氏 |
+| `phone` | string | | 電話 |
+| `address_1` | string | | 地址 |
+| `city` | string | | 城市 |
+| `postcode` | string | | 郵遞區號 |
 
 #### 查詢訂單
 
@@ -87,6 +96,17 @@ PUT /wp-json/quick-order/v1/orders/{id}/status
 |------|------|:----:|------|
 | `status` | string | ✓ | 訂單狀態 |
 | `note` | string | | 狀態變更備註 |
+
+## 客戶帳號設定
+
+當訂單帶有 Email 時：
+
+- **Email 已存在** → 自動關聯既有 WordPress/WooCommerce 帳號
+- **Email 不存在 + 自動建立帳號開啟** → 透過 `wc_create_new_customer()` 建立新帳號並關聯
+- **Email 不存在 + 自動建立帳號關閉** → 僅填入帳單資訊，不建立帳號（guest order）
+- **無 Email** → guest order，行為不變
+
+自動建立帳號可在 **WooCommerce → Quick Order → 設定** 中控制（預設開啟）。
 
 ## API Key 設定
 
