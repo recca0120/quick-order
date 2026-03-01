@@ -10,6 +10,9 @@ use Suspended\QuickOrder\Middleware\AbstractCreateOrder;
 use Suspended\QuickOrder\OrderService;
 use WP_UnitTestCase;
 
+/**
+ * @group reverse-proxy
+ */
 class AbstractCreateOrderTest extends WP_UnitTestCase
 {
     public function test_creates_order_and_injects_into_request()

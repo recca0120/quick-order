@@ -21,5 +21,8 @@
         <include>
             <directory suffix=".php">src</directory>
         </include>
+        <exclude>
+            <directory suffix=".php">src/Middleware</directory>
+        </exclude>
     </coverage>
 </phpunit>

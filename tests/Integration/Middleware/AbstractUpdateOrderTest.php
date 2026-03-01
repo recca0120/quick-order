@@ -10,6 +10,9 @@ use Suspended\QuickOrder\Middleware\AbstractUpdateOrder;
 use Suspended\QuickOrder\OrderService;
 use WP_UnitTestCase;
 
+/**
+ * @group reverse-proxy
+ */
 class AbstractUpdateOrderTest extends WP_UnitTestCase
 {
     public function test_updates_order_status_from_callback()
