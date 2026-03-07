@@ -1,37 +1,36 @@
 <?php
 
-namespace Suspended\QuickOrder\Tests\Integration;
+namespace Recca0120\QuickOrder\Tests\Integration;
 
-use Suspended\QuickOrder\OrderForm;
+use Recca0120\QuickOrder\OrderForm;
 use WP_UnitTestCase;
 
 class OrderFormTest extends WP_UnitTestCase
 {
     public function test_render_contains_required_fields()
     {
-        $form = new OrderForm;
+        $form = new OrderForm();
 
         ob_start();
         $form->render();
         $html = ob_get_clean();
 
         $this->assertStringContainsString('qo-amount', $html);
-        $this->assertStringContainsString('qo-name', $html);
+        $this->assertStringContainsString('qo-description', $html);
         $this->assertStringContainsString('qo-note', $html);
         $this->assertStringContainsString('quick_order_nonce', $html);
     }
 
     public function test_render_contains_customer_fields()
     {
-        $form = new OrderForm;
+        $form = new OrderForm();
 
         ob_start();
         $form->render();
         $html = ob_get_clean();
 
+        $this->assertStringContainsString('qo-customer-name', $html);
         $this->assertStringContainsString('qo-email', $html);
-        $this->assertStringContainsString('qo-first-name', $html);
-        $this->assertStringContainsString('qo-last-name', $html);
         $this->assertStringContainsString('qo-phone', $html);
         $this->assertStringContainsString('qo-address', $html);
         $this->assertStringContainsString('qo-city', $html);
@@ -40,7 +39,7 @@ class OrderFormTest extends WP_UnitTestCase
 
     public function test_render_contains_order_number_field()
     {
-        $form = new OrderForm;
+        $form = new OrderForm();
 
         ob_start();
         $form->render();
@@ -55,7 +54,7 @@ class OrderFormTest extends WP_UnitTestCase
 
     public function test_email_field_is_not_required()
     {
-        $form = new OrderForm;
+        $form = new OrderForm();
 
         ob_start();
         $form->render();

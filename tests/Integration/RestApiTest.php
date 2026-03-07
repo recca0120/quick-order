@@ -1,9 +1,9 @@
 <?php
 
-namespace Suspended\QuickOrder\Tests\Integration;
+namespace Recca0120\QuickOrder\Tests\Integration;
 
-use Suspended\QuickOrder\OrderService;
-use Suspended\QuickOrder\RestApi;
+use Recca0120\QuickOrder\OrderService;
+use Recca0120\QuickOrder\RestApi;
 use WP_REST_Request;
 use WP_UnitTestCase;
 
@@ -16,7 +16,7 @@ class RestApiTest extends WP_UnitTestCase
     {
         parent::setUp();
 
-        $this->orderService = new OrderService;
+        $this->orderService = new OrderService();
         $restApi = new RestApi($this->orderService);
         $restApi->register();
 
@@ -77,7 +77,7 @@ class RestApiTest extends WP_UnitTestCase
 
         $request = new WP_REST_Request('POST', '/quick-order/v1/orders');
         $request->set_param('amount', 500);
-        $request->set_param('name', '會員儲值');
+        $request->set_param('description', '會員儲值');
         $request->set_param('note', '測試備註');
 
         $response = rest_do_request($request);
@@ -93,10 +93,9 @@ class RestApiTest extends WP_UnitTestCase
 
         $request = new WP_REST_Request('POST', '/quick-order/v1/orders');
         $request->set_param('amount', 300);
+        $request->set_param('name', 'Rest Client');
         $request->set_param('email', 'rest-customer@example.com');
-        $request->set_param('first_name', 'Rest');
-        $request->set_param('last_name', 'Client');
-        $request->set_param('phone', '0922222222');
+        $request->set_param('phone_number', '0922222222');
         $request->set_param('address_1', '忠孝東路');
         $request->set_param('city', '台北市');
         $request->set_param('postcode', '100');

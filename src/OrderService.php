@@ -1,29 +1,27 @@
 <?php
 
-namespace Suspended\QuickOrder;
+namespace Recca0120\QuickOrder;
 
 class OrderService
 {
-    const CUSTOMER_FIELDS = ['email', 'first_name', 'last_name', 'phone', 'address_1', 'city', 'postcode'];
-
-    public function createOrder($amount, $name = '', $note = '', $customer = [], $orderNumber = '')
+    public function createOrder($amount, $description = '自訂訂單', $note = '', ?Customer $customer = null, $orderNumber = '')
     {
         $amount = floatval($amount);
         if ($amount <= 0) {
             throw new \InvalidArgumentException('金額必須大於 0');
         }
 
-        $name = $name ?: '自訂訂單';
-
         $order = wc_create_order();
 
-        $fee = new \WC_Order_Item_Fee;
-        $fee->set_name($name);
+        $fee = new \WC_Order_Item_Fee();
+        $fee->set_name($description);
         $fee->set_amount($amount);
         $fee->set_total($amount);
         $order->add_item($fee);
 
-        $this->applyCustomer($order, $customer);
+        if ($customer !== null) {
+            $this->applyCustomer($order, $customer);
+        }
         $this->applyOrderNumber($order, $orderNumber);
 
         $order->calculate_totals();
@@ -38,14 +36,29 @@ class OrderService
         return $order;
     }
 
-    private function applyCustomer(\WC_Order $order, array $customer)
+    public function getOrder($orderId)
     {
-        $email = isset($customer['email']) ? sanitize_email($customer['email']) : '';
+        return $this->findOrFail($orderId);
+    }
+
+    public function updateOrderStatus($orderId, $status, $note = '')
+    {
+        $order = $this->findOrFail($orderId);
+        $order->set_status($status, $note);
+        $order->save();
+
+        return $order;
+    }
+
+    private function applyCustomer(\WC_Order $order, Customer $customer)
+    {
+        $email = sanitize_email($customer->email);
         if (! $email) {
             return;
         }
 
-        // Link or create customer
+        $nameParts = $customer->splitName();
+
         if (email_exists($email)) {
             $user = get_user_by('email', $email);
             $order->set_customer_id($user->ID);
@@ -54,10 +67,10 @@ class OrderService
                 $userId = wc_create_new_customer(
                     $email,
                     '',
-                    wp_generate_password(),
+                    $customer->phone_number ?: wp_generate_password(),
                     [
-                        'first_name' => isset($customer['first_name']) ? $customer['first_name'] : '',
-                        'last_name' => isset($customer['last_name']) ? $customer['last_name'] : '',
+                        'first_name' => $nameParts['first_name'],
+                        'last_name' => $nameParts['last_name'],
                     ]
                 );
                 $order->set_customer_id($userId);
@@ -66,23 +79,20 @@ class OrderService
             }
         }
 
-        // Set billing fields
         $billingFields = [
-            'email' => 'set_billing_email',
-            'first_name' => 'set_billing_first_name',
-            'last_name' => 'set_billing_last_name',
-            'phone' => 'set_billing_phone',
-            'address_1' => 'set_billing_address_1',
-            'city' => 'set_billing_city',
-            'postcode' => 'set_billing_postcode',
+            'email' => $email,
+            'first_name' => $nameParts['first_name'],
+            'last_name' => $nameParts['last_name'],
+            'phone' => $customer->phone_number,
+            'address_1' => $customer->address_1,
+            'city' => $customer->city,
+            'postcode' => $customer->postcode,
         ];
 
-        foreach ($billingFields as $key => $method) {
-            if (isset($customer[$key]) && $customer[$key] !== '') {
-                $value = $key === 'email' ? sanitize_email($customer[$key]) : sanitize_text_field($customer[$key]);
-                if ($value !== '') {
-                    $order->$method($value);
-                }
+        foreach ($billingFields as $field => $value) {
+            $value = $field === 'email' ? $value : sanitize_text_field($value);
+            if ($value !== '') {
+                $order->{'set_billing_'.$field}($value);
             }
         }
     }
@@ -104,7 +114,6 @@ class OrderService
         $today = current_time('Ymd');
         $optionKey = 'quick_order_daily_seq_'.$today;
 
-        // Atomic upsert: insert or increment in a single query
         $wpdb->query($wpdb->prepare(
             "INSERT INTO {$wpdb->options} (option_name, option_value, autoload) VALUES (%s, 1, 'no')
              ON DUPLICATE KEY UPDATE option_value = option_value + 1",
@@ -114,7 +123,6 @@ class OrderService
         wp_cache_delete($optionKey, 'options');
         $seq = (int) get_option($optionKey);
 
-        // Cleanup stale options occasionally (1 in 10 chance)
         if (wp_rand(1, 10) === 1) {
             $this->cleanupStaleSequenceOptions($today);
         }
@@ -142,25 +150,12 @@ class OrderService
         }
     }
 
-    public function getOrder($orderId)
+    private function findOrFail($orderId)
     {
         $order = wc_get_order($orderId);
         if (! $order) {
             throw new \InvalidArgumentException('找不到訂單');
         }
-
-        return $order;
-    }
-
-    public function updateOrderStatus($orderId, $status, $note = '')
-    {
-        $order = wc_get_order($orderId);
-        if (! $order) {
-            throw new \InvalidArgumentException('找不到訂單');
-        }
-
-        $order->set_status($status, $note);
-        $order->save();
 
         return $order;
     }

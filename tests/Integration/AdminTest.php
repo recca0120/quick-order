@@ -1,10 +1,10 @@
 <?php
 
-namespace Suspended\QuickOrder\Tests\Integration;
+namespace Recca0120\QuickOrder\Tests\Integration;
 
-use Suspended\QuickOrder\Admin;
-use Suspended\QuickOrder\OrderForm;
-use Suspended\QuickOrder\OrderService;
+use Recca0120\QuickOrder\Admin;
+use Recca0120\QuickOrder\OrderForm;
+use Recca0120\QuickOrder\OrderService;
 use WP_Ajax_UnitTestCase;
 
 class AdminTest extends WP_Ajax_UnitTestCase
@@ -19,7 +19,7 @@ class AdminTest extends WP_Ajax_UnitTestCase
         $adminId = $this->factory->user->create(['role' => 'administrator']);
         wp_set_current_user($adminId);
 
-        $this->admin = new Admin(new OrderService, new OrderForm);
+        $this->admin = new Admin(new OrderService(), new OrderForm());
         $this->admin->register();
     }
 
@@ -40,7 +40,7 @@ class AdminTest extends WP_Ajax_UnitTestCase
         $html = ob_get_clean();
 
         $this->assertStringContainsString('qo-amount', $html);
-        $this->assertStringContainsString('qo-name', $html);
+        $this->assertStringContainsString('qo-description', $html);
         $this->assertStringContainsString('qo-note', $html);
         $this->assertStringContainsString('quick_order_nonce', $html);
     }
@@ -50,7 +50,7 @@ class AdminTest extends WP_Ajax_UnitTestCase
         $nonce = wp_create_nonce('quick_order_create');
         $_POST['quick_order_nonce'] = $nonce;
         $_POST['amount'] = '250';
-        $_POST['name'] = '測試商品';
+        $_POST['description'] = '測試商品';
         $_POST['note'] = '';
         $_REQUEST['quick_order_nonce'] = $nonce;
 
@@ -162,12 +162,11 @@ class AdminTest extends WP_Ajax_UnitTestCase
         $_POST['quick_order_nonce'] = $nonce;
         $_REQUEST['quick_order_nonce'] = $nonce;
         $_POST['amount'] = '500';
-        $_POST['name'] = '';
+        $_POST['description'] = '';
         $_POST['note'] = '';
+        $_POST['name'] = 'Ajax Test';
         $_POST['email'] = 'ajax-customer@example.com';
-        $_POST['first_name'] = 'Ajax';
-        $_POST['last_name'] = 'Test';
-        $_POST['phone'] = '0911111111';
+        $_POST['phone_number'] = '0911111111';
         $_POST['address_1'] = '中正路100號';
         $_POST['city'] = '高雄市';
         $_POST['postcode'] = '800';
@@ -189,7 +188,7 @@ class AdminTest extends WP_Ajax_UnitTestCase
         $_POST['quick_order_nonce'] = $nonce;
         $_REQUEST['quick_order_nonce'] = $nonce;
         $_POST['amount'] = '100';
-        $_POST['name'] = '';
+        $_POST['description'] = '';
         $_POST['note'] = '';
         $_POST['email'] = 'not-a-valid-email';
 
@@ -241,7 +240,7 @@ class AdminTest extends WP_Ajax_UnitTestCase
         $_POST['quick_order_nonce'] = $nonce;
         $_REQUEST['quick_order_nonce'] = $nonce;
         $_POST['amount'] = '100';
-        $_POST['name'] = '';
+        $_POST['description'] = '';
         $_POST['note'] = '';
 
         $response = $this->captureAjax(function () {
@@ -259,7 +258,7 @@ class AdminTest extends WP_Ajax_UnitTestCase
         $_POST['quick_order_nonce'] = $nonce;
         $_REQUEST['quick_order_nonce'] = $nonce;
         $_POST['amount'] = '100';
-        $_POST['name'] = '';
+        $_POST['description'] = '';
         $_POST['note'] = '';
         $_POST['order_number'] = 'CUSTOM-999';
 
@@ -296,7 +295,7 @@ class AdminTest extends WP_Ajax_UnitTestCase
     {
         update_option('quick_order_custom_order_number', 'yes');
 
-        $service = new OrderService;
+        $service = new OrderService();
         $order = $service->createOrder(100);
         $expectedNumber = $order->get_meta('_order_number');
 
@@ -314,10 +313,10 @@ class AdminTest extends WP_Ajax_UnitTestCase
 
         update_option('quick_order_custom_order_number', 'no');
 
-        $admin = new Admin(new OrderService, new OrderForm);
+        $admin = new Admin(new OrderService(), new OrderForm());
         $admin->register();
 
-        $service = new OrderService;
+        $service = new OrderService();
         $order = $service->createOrder(100);
 
         $result = apply_filters('woocommerce_order_number', $order->get_id(), $order);

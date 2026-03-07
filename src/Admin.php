@@ -1,6 +1,6 @@
 <?php
 
-namespace Suspended\QuickOrder;
+namespace Recca0120\QuickOrder;
 
 class Admin
 {
@@ -31,7 +31,7 @@ class Admin
     {
         $custom = $order->get_meta('_order_number');
 
-        return $custom ? $custom : $orderNumber;
+        return $custom ?: $orderNumber;
     }
 
     public function addMenu()
@@ -71,9 +71,7 @@ class Admin
         register_setting('quick_order_settings', 'quick_order_auto_create_customer', [
             'type' => 'string',
             'default' => 'yes',
-            'sanitize_callback' => function ($value) {
-                return $value === 'yes' ? 'yes' : 'no';
-            },
+            'sanitize_callback' => [$this, 'sanitizeCheckbox'],
         ]);
 
         add_settings_section(
@@ -94,9 +92,7 @@ class Admin
         register_setting('quick_order_settings', 'quick_order_custom_order_number', [
             'type' => 'string',
             'default' => 'yes',
-            'sanitize_callback' => function ($value) {
-                return $value === 'yes' ? 'yes' : 'no';
-            },
+            'sanitize_callback' => [$this, 'sanitizeCheckbox'],
         ]);
 
         register_setting('quick_order_settings', 'quick_order_order_prefix', [
@@ -127,6 +123,11 @@ class Admin
             'quick-order-settings',
             'quick_order_order_number_section'
         );
+    }
+
+    public function sanitizeCheckbox($value)
+    {
+        return $value === 'yes' ? 'yes' : 'no';
     }
 
     public function renderAutoCreateCustomerField()
@@ -207,23 +208,13 @@ class Admin
         }
 
         try {
-            $customerFields = OrderService::CUSTOMER_FIELDS;
-            $customer = [];
-            foreach ($customerFields as $field) {
-                if (isset($_POST[$field]) && $_POST[$field] !== '') {
-                    $value = wp_unslash($_POST[$field]);
-                    $customer[$field] = $field === 'email' ? sanitize_email($value) : sanitize_text_field($value);
-                }
-            }
-
-            $orderNumber = isset($_POST['order_number']) ? sanitize_text_field(wp_unslash($_POST['order_number'])) : '';
-
+            $post = wp_unslash($_POST);
             $order = $this->orderService->createOrder(
-                isset($_POST['amount']) ? floatval($_POST['amount']) : 0,
-                isset($_POST['name']) ? sanitize_text_field(wp_unslash($_POST['name'])) : '',
-                isset($_POST['note']) ? sanitize_textarea_field(wp_unslash($_POST['note'])) : '',
-                $customer,
-                $orderNumber
+                floatval($post['amount'] ?? 0),
+                sanitize_text_field($post['description'] ?? ''),
+                sanitize_textarea_field($post['note'] ?? ''),
+                Customer::fromPost($_POST),
+                sanitize_text_field($post['order_number'] ?? '')
             );
 
             wp_send_json_success([

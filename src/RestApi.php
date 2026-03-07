@@ -1,6 +1,6 @@
 <?php
 
-namespace Suspended\QuickOrder;
+namespace Recca0120\QuickOrder;
 
 class RestApi
 {
@@ -32,7 +32,7 @@ class RestApi
                             return floatval($value);
                         },
                     ],
-                    'name' => [
+                    'description' => [
                         'required' => false,
                         'type' => 'string',
                         'default' => '',
@@ -126,23 +126,12 @@ class RestApi
     public function createOrder($request)
     {
         try {
-            $customerFields = OrderService::CUSTOMER_FIELDS;
-            $customer = [];
-            foreach ($customerFields as $field) {
-                $value = $request->get_param($field);
-                if ($value !== '' && $value !== null) {
-                    $customer[$field] = $value;
-                }
-            }
-
-            $orderNumber = $request->get_param('order_number');
-
             $order = $this->orderService->createOrder(
                 $request->get_param('amount'),
-                $request->get_param('name'),
+                $request->get_param('description'),
                 $request->get_param('note'),
-                $customer,
-                $orderNumber ?: ''
+                Customer::fromRequest($request),
+                $request->get_param('order_number') ?: ''
             );
 
             return new \WP_REST_Response($this->formatOrder($order), 201);
@@ -199,7 +188,7 @@ class RestApi
     private function customerArgs()
     {
         $args = [];
-        foreach (OrderService::CUSTOMER_FIELDS as $field) {
+        foreach (['name', 'email', 'phone_number', 'address_1', 'city', 'postcode'] as $field) {
             $args[$field] = [
                 'required' => false,
                 'type' => 'string',

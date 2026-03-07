@@ -1,8 +1,9 @@
 <?php
 
-namespace Suspended\QuickOrder\Tests\Integration;
+namespace Recca0120\QuickOrder\Tests\Integration;
 
-use Suspended\QuickOrder\OrderService;
+use Recca0120\QuickOrder\Customer;
+use Recca0120\QuickOrder\OrderService;
 use WP_UnitTestCase;
 
 class OrderServiceTest extends WP_UnitTestCase
@@ -13,7 +14,7 @@ class OrderServiceTest extends WP_UnitTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new OrderService;
+        $this->service = new OrderService();
     }
 
     public function test_create_order_with_amount()
@@ -110,15 +111,14 @@ class OrderServiceTest extends WP_UnitTestCase
 
     public function test_create_order_with_customer_billing_fields()
     {
-        $customer = [
+        $customer = Customer::fromArray([
+            'name' => 'John Doe',
             'email' => 'test@example.com',
-            'first_name' => 'John',
-            'last_name' => 'Doe',
-            'phone' => '0912345678',
+            'phone_number' => '0912345678',
             'address_1' => '台北市信義區',
             'city' => '台北市',
             'postcode' => '110',
-        ];
+        ]);
 
         $order = $this->service->createOrder(100, '', '', $customer);
 
@@ -135,44 +135,41 @@ class OrderServiceTest extends WP_UnitTestCase
     {
         update_option('quick_order_auto_create_customer', 'yes');
 
-        $customer = [
+        $customer = Customer::fromArray([
             'email' => 'newuser_'.wp_generate_password(4, false).'@example.com',
-            'first_name' => 'New',
-            'last_name' => 'User',
-        ];
+            'name' => 'New User',
+        ]);
 
         $order = $this->service->createOrder(100, '', '', $customer);
 
         $this->assertGreaterThan(0, $order->get_customer_id());
         $user = get_user_by('id', $order->get_customer_id());
-        $this->assertEquals($customer['email'], $user->user_email);
+        $this->assertEquals($customer->email, $user->user_email);
     }
 
     public function test_create_order_does_not_create_customer_when_auto_create_disabled()
     {
         update_option('quick_order_auto_create_customer', 'no');
 
-        $customer = [
+        $customer = Customer::fromArray([
             'email' => 'noauto_'.wp_generate_password(4, false).'@example.com',
-            'first_name' => 'No',
-            'last_name' => 'Auto',
-        ];
+            'name' => 'No Auto',
+        ]);
 
         $order = $this->service->createOrder(100, '', '', $customer);
 
         $this->assertEquals(0, $order->get_customer_id());
-        $this->assertEquals($customer['email'], $order->get_billing_email());
+        $this->assertEquals($customer->email, $order->get_billing_email());
     }
 
     public function test_create_order_links_existing_customer_by_email()
     {
         $userId = self::factory()->user->create(['user_email' => 'existing@example.com']);
 
-        $customer = [
+        $customer = Customer::fromArray([
             'email' => 'existing@example.com',
-            'first_name' => 'Exist',
-            'last_name' => 'User',
-        ];
+            'name' => 'Exist User',
+        ]);
 
         $order = $this->service->createOrder(100, '', '', $customer);
 
@@ -181,24 +178,23 @@ class OrderServiceTest extends WP_UnitTestCase
 
     public function test_create_order_without_email_remains_guest()
     {
-        $order = $this->service->createOrder(100, '', '', []);
+        $order = $this->service->createOrder(100);
 
         $this->assertEquals(0, $order->get_customer_id());
     }
 
     public function test_create_order_sanitizes_customer_billing_fields()
     {
-        $customer = [
+        $customer = Customer::fromArray([
             'email' => 'valid@example.com',
-            'first_name' => '<script>alert("xss")</script>John',
-            'phone' => "123\n456",
+            'name' => '<script>alert("xss")</script>John',
+            'phone_number' => "123\n456",
             'city' => '  台北市  ',
-        ];
+        ]);
 
         $order = $this->service->createOrder(100, '', '', $customer);
 
         // sanitize_text_field strips tags, trims, removes newlines
-        // sanitize_text_field strips all HTML tags
         $this->assertStringNotContainsString('<script>', $order->get_billing_first_name());
         $this->assertEquals('123 456', $order->get_billing_phone());
         $this->assertEquals('台北市', $order->get_billing_city());
@@ -206,10 +202,10 @@ class OrderServiceTest extends WP_UnitTestCase
 
     public function test_create_order_sanitizes_invalid_email_in_customer()
     {
-        $customer = [
+        $customer = Customer::fromArray([
             'email' => 'not-valid-email',
-            'first_name' => 'Test',
-        ];
+            'name' => 'Test',
+        ]);
 
         $order = $this->service->createOrder(100, '', '', $customer);
 
@@ -232,7 +228,7 @@ class OrderServiceTest extends WP_UnitTestCase
 
     public function test_create_order_with_custom_order_number()
     {
-        $order = $this->service->createOrder(100, '', '', [], 'MY-CUSTOM-001');
+        $order = $this->service->createOrder(100, '', '', null, 'MY-CUSTOM-001');
 
         $this->assertEquals('MY-CUSTOM-001', $order->get_meta('_order_number'));
     }
