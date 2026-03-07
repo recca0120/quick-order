@@ -71,7 +71,7 @@ jobs:
           DB_ENGINE: ${{ matrix.db }}
           DB_PASSWORD: ${{ matrix.db == 'mysql' && 'root' || '' }}
           WP_CORE_DIR: ${{ github.workspace }}/.wordpress-test/wordpress
-        run: ./vendor/bin/phpunit --exclude-group reverse-proxy --coverage-text --coverage-clover=coverage.xml
+        run: ./vendor/bin/phpunit --coverage-text --coverage-clover=coverage.xml
 
       - name: Upload coverage to Codecov
         if: matrix.php == '8.3' && matrix.db == 'sqlite'

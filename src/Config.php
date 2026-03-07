@@ -1,6 +1,6 @@
 <?php
 
-namespace Suspended\QuickOrder;
+namespace Recca0120\QuickOrder;
 
 class Config
 {

@@ -13,7 +13,7 @@ if (! defined('ABSPATH')) {
 }
 
 spl_autoload_register(function ($class) {
-    $prefix = 'Suspended\\QuickOrder\\';
+    $prefix = 'Recca0120\\QuickOrder\\';
     if (strpos($class, $prefix) !== 0) {
         return;
     }
@@ -31,15 +31,15 @@ add_action('plugins_loaded', function () {
         return;
     }
 
-    $orderService = new Suspended\QuickOrder\OrderService;
-    $orderForm = new Suspended\QuickOrder\OrderForm;
+    $orderService = new Recca0120\QuickOrder\OrderService();
+    $orderForm = new Recca0120\QuickOrder\OrderForm();
 
-    $admin = new Suspended\QuickOrder\Admin($orderService, $orderForm);
+    $admin = new Recca0120\QuickOrder\Admin($orderService, $orderForm);
     $admin->register();
 
-    $shortcode = new Suspended\QuickOrder\Shortcode($orderForm);
+    $shortcode = new Recca0120\QuickOrder\Shortcode($orderForm);
     $shortcode->register();
 
-    $restApi = new Suspended\QuickOrder\RestApi($orderService);
+    $restApi = new Recca0120\QuickOrder\RestApi(new Recca0120\QuickOrder\OrderSyncer($orderService));
     $restApi->register();
 });

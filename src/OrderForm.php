@@ -1,6 +1,6 @@
 <?php
 
-namespace Suspended\QuickOrder;
+namespace Recca0120\QuickOrder;
 
 class OrderForm
 {
@@ -26,20 +26,16 @@ class OrderForm
                     <td><input type="text" id="qo-order-number" name="order_number" class="regular-text" placeholder="<?php esc_attr_e('自動產生', 'quick-order'); ?>"></td>
                 </tr>
                 <tr>
+                    <th><label for="qo-customer-name"><?php esc_html_e('客戶姓名', 'quick-order'); ?></label></th>
+                    <td><input type="text" id="qo-customer-name" name="name" class="regular-text"></td>
+                </tr>
+                <tr>
                     <th><label for="qo-email"><?php esc_html_e('Email', 'quick-order'); ?></label></th>
                     <td><input type="email" id="qo-email" name="email" class="regular-text"></td>
                 </tr>
                 <tr>
-                    <th><label for="qo-first-name"><?php esc_html_e('名字', 'quick-order'); ?></label></th>
-                    <td><input type="text" id="qo-first-name" name="first_name" class="regular-text"></td>
-                </tr>
-                <tr>
-                    <th><label for="qo-last-name"><?php esc_html_e('姓氏', 'quick-order'); ?></label></th>
-                    <td><input type="text" id="qo-last-name" name="last_name" class="regular-text"></td>
-                </tr>
-                <tr>
                     <th><label for="qo-phone"><?php esc_html_e('電話', 'quick-order'); ?></label></th>
-                    <td><input type="tel" id="qo-phone" name="phone" class="regular-text"></td>
+                    <td><input type="tel" id="qo-phone" name="phone_number" class="regular-text"></td>
                 </tr>
                 <tr>
                     <th><label for="qo-address"><?php esc_html_e('地址', 'quick-order'); ?></label></th>
@@ -58,8 +54,8 @@ class OrderForm
                     <td><input type="number" id="qo-amount" name="amount" step="0.01" min="0.01" required class="regular-text"></td>
                 </tr>
                 <tr>
-                    <th><label for="qo-name"><?php esc_html_e('商品名稱', 'quick-order'); ?></label></th>
-                    <td><input type="text" id="qo-name" name="name" class="regular-text" placeholder="<?php esc_attr_e('自訂訂單', 'quick-order'); ?>"></td>
+                    <th><label for="qo-description"><?php esc_html_e('商品名稱', 'quick-order'); ?></label></th>
+                    <td><input type="text" id="qo-description" name="description" class="regular-text" placeholder="<?php esc_attr_e('自訂訂單', 'quick-order'); ?>"></td>
                 </tr>
                 <tr>
                     <th><label for="qo-note"><?php esc_html_e('備註', 'quick-order'); ?></label></th>

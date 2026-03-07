@@ -1,9 +1,9 @@
 <?php
 
-namespace Suspended\QuickOrder\Tests\Integration;
+namespace Recca0120\QuickOrder\Tests\Integration;
 
-use Suspended\QuickOrder\OrderForm;
-use Suspended\QuickOrder\Shortcode;
+use Recca0120\QuickOrder\OrderForm;
+use Recca0120\QuickOrder\Shortcode;
 use WP_UnitTestCase;
 
 class ShortcodeTest extends WP_UnitTestCase
@@ -14,7 +14,7 @@ class ShortcodeTest extends WP_UnitTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $orderForm = new OrderForm;
+        $orderForm = new OrderForm();
         $this->shortcode = new Shortcode($orderForm);
         $this->shortcode->register();
     }

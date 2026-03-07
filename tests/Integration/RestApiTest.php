@@ -1,9 +1,9 @@
 <?php
 
-namespace Suspended\QuickOrder\Tests\Integration;
+namespace Recca0120\QuickOrder\Tests\Integration;
 
-use Suspended\QuickOrder\OrderService;
-use Suspended\QuickOrder\RestApi;
+use Recca0120\QuickOrder\OrderService;
+use Recca0120\QuickOrder\RestApi;
 use WP_REST_Request;
 use WP_UnitTestCase;
 
@@ -16,8 +16,9 @@ class RestApiTest extends WP_UnitTestCase
     {
         parent::setUp();
 
-        $this->orderService = new OrderService;
-        $restApi = new RestApi($this->orderService);
+        $this->orderService = new OrderService();
+        $orderSyncer = new \Recca0120\QuickOrder\OrderSyncer($this->orderService);
+        $restApi = new RestApi($orderSyncer);
         $restApi->register();
 
         do_action('rest_api_init');
@@ -77,7 +78,7 @@ class RestApiTest extends WP_UnitTestCase
 
         $request = new WP_REST_Request('POST', '/quick-order/v1/orders');
         $request->set_param('amount', 500);
-        $request->set_param('name', '會員儲值');
+        $request->set_param('description', '會員儲值');
         $request->set_param('note', '測試備註');
 
         $response = rest_do_request($request);
@@ -93,10 +94,9 @@ class RestApiTest extends WP_UnitTestCase
 
         $request = new WP_REST_Request('POST', '/quick-order/v1/orders');
         $request->set_param('amount', 300);
+        $request->set_param('name', 'Rest Client');
         $request->set_param('email', 'rest-customer@example.com');
-        $request->set_param('first_name', 'Rest');
-        $request->set_param('last_name', 'Client');
-        $request->set_param('phone', '0922222222');
+        $request->set_param('phone_number', '0922222222');
         $request->set_param('address_1', '忠孝東路');
         $request->set_param('city', '台北市');
         $request->set_param('postcode', '100');
@@ -139,6 +139,74 @@ class RestApiTest extends WP_UnitTestCase
         $this->assertEquals(201, $response->get_status());
         $data = $response->get_data();
         $this->assertEquals('EXT-12345', $data['order_number']);
+    }
+
+    // ── 金流欄位 ──
+
+    public function test_create_order_with_transaction_reference()
+    {
+        wp_set_current_user(self::factory()->user->create(['role' => 'administrator']));
+
+        $request = new WP_REST_Request('POST', '/quick-order/v1/orders');
+        $request->set_param('amount', 1000);
+        $request->set_param('transaction_reference', 'GW-REF-999');
+
+        $response = rest_do_request($request);
+
+        $this->assertEquals(201, $response->get_status());
+        $order = wc_get_order($response->get_data()['order_id']);
+        $this->assertEquals('GW-REF-999', $order->get_transaction_id());
+    }
+
+    public function test_create_order_with_payment_method()
+    {
+        wp_set_current_user(self::factory()->user->create(['role' => 'administrator']));
+
+        $request = new WP_REST_Request('POST', '/quick-order/v1/orders');
+        $request->set_param('amount', 1000);
+        $request->set_param('gateway_name', 'newebpay');
+        $request->set_param('payment_method', 'atm');
+
+        $response = rest_do_request($request);
+
+        $this->assertEquals(201, $response->get_status());
+        $order = wc_get_order($response->get_data()['order_id']);
+        $this->assertEquals('omnipay_newebpay_atm', $order->get_payment_method());
+        $this->assertEquals('newebpay', $order->get_payment_method_title());
+    }
+
+    public function test_create_order_with_dates()
+    {
+        wp_set_current_user(self::factory()->user->create(['role' => 'administrator']));
+
+        $request = new WP_REST_Request('POST', '/quick-order/v1/orders');
+        $request->set_param('amount', 1000);
+        $request->set_param('created_at', '2026-03-07T20:28:15.000000Z');
+        $request->set_param('completed_at', '2026-03-07T20:30:00.000000Z');
+
+        $response = rest_do_request($request);
+
+        $this->assertEquals(201, $response->get_status());
+        $order = wc_get_order($response->get_data()['order_id']);
+        $this->assertEquals('2026-03-07 20:28:15', $order->get_date_created()->date('Y-m-d H:i:s'));
+        $this->assertEquals('2026-03-07 20:30:00', $order->get_date_paid()->date('Y-m-d H:i:s'));
+    }
+
+    public function test_create_order_with_extra_payment_fields()
+    {
+        wp_set_current_user(self::factory()->user->create(['role' => 'administrator']));
+
+        $request = new WP_REST_Request('POST', '/quick-order/v1/orders');
+        $request->set_param('amount', 1000);
+        $request->set_param('bank_code', '001');
+        $request->set_param('account_number', '12345678901');
+
+        $response = rest_do_request($request);
+
+        $this->assertEquals(201, $response->get_status());
+        $order = wc_get_order($response->get_data()['order_id']);
+        $this->assertEquals('001', $order->get_meta('_payment_bank_code'));
+        $this->assertEquals('12345678901', $order->get_meta('_payment_account_number'));
     }
 
     // ── API Key 認證 ──
@@ -224,6 +292,93 @@ class RestApiTest extends WP_UnitTestCase
         remove_all_filters('quick_order_api_key_override');
     }
 
+    // ── POST /orders/sync ──
+
+    public function test_sync_endpoint_creates_order_with_full_payment_data()
+    {
+        wp_set_current_user(self::factory()->user->create(['role' => 'administrator']));
+
+        $request = new WP_REST_Request('POST', '/quick-order/v1/orders/sync');
+        $request->set_header('Content-Type', 'application/json');
+        $request->set_body(json_encode([
+            'transaction_id' => 'QO-20260309-099',
+            'amount' => 1000,
+            'description' => '同步商品',
+            'status' => 'completed',
+            'name' => '王小明',
+            'email' => 'wang@example.com',
+            'gateway_name' => 'newebpay',
+            'payment_method' => 'atm',
+            'bank_code' => '001',
+            'account_number' => '12345678901',
+        ]));
+
+        $response = rest_do_request($request);
+
+        $this->assertEquals(200, $response->get_status());
+        $data = $response->get_data();
+        $order = wc_get_order($data['order_id']);
+        $this->assertEquals('QO-20260309-099', $data['order_number']);
+        $this->assertEquals('completed', $order->get_status());
+        $this->assertEquals('omnipay_newebpay_atm', $order->get_payment_method());
+        $this->assertEquals('001', $order->get_meta('_payment_bank_code'));
+    }
+
+    public function test_sync_endpoint_updates_existing_order()
+    {
+        wp_set_current_user(self::factory()->user->create(['role' => 'administrator']));
+
+        $order = $this->orderService->createOrder(1000, '商品', '', null, 'QO-20260309-100');
+
+        $request = new WP_REST_Request('POST', '/quick-order/v1/orders/sync');
+        $request->set_header('Content-Type', 'application/json');
+        $request->set_body(json_encode([
+            'transaction_id' => 'QO-20260309-100',
+            'amount' => 1000,
+            'status' => 'completed',
+            'transaction_reference' => 'GW-REF-999',
+        ]));
+
+        $response = rest_do_request($request);
+
+        $this->assertEquals(200, $response->get_status());
+        $data = $response->get_data();
+        $this->assertEquals($order->get_id(), $data['order_id']);
+        $updated = wc_get_order($data['order_id']);
+        $this->assertEquals('completed', $updated->get_status());
+        $this->assertEquals('GW-REF-999', $updated->get_transaction_id());
+    }
+
+    // ── PUT /orders/{transaction_id}/status ──
+
+    public function test_update_status_by_transaction_id()
+    {
+        wp_set_current_user(self::factory()->user->create(['role' => 'administrator']));
+
+        $this->orderService->createOrder(300, '', '', null, 'QO-TX-001');
+
+        $request = new WP_REST_Request('PUT', '/quick-order/v1/orders/QO-TX-001/status');
+        $request->set_param('status', 'processing');
+        $request->set_param('note', '已處理');
+
+        $response = rest_do_request($request);
+
+        $this->assertEquals(200, $response->get_status());
+        $this->assertEquals('processing', $response->get_data()['status']);
+    }
+
+    public function test_update_status_returns_404_for_unknown_transaction_id()
+    {
+        wp_set_current_user(self::factory()->user->create(['role' => 'administrator']));
+
+        $request = new WP_REST_Request('PUT', '/quick-order/v1/orders/UNKNOWN-TX/status');
+        $request->set_param('status', 'completed');
+
+        $response = rest_do_request($request);
+
+        $this->assertEquals(404, $response->get_status());
+    }
+
     // ── GET /orders/{id} ──
 
     public function test_get_order_returns_order_details()
@@ -259,26 +414,25 @@ class RestApiTest extends WP_UnitTestCase
     {
         wp_set_current_user(self::factory()->user->create(['role' => 'administrator']));
 
-        $order = $this->orderService->createOrder(300);
+        $this->orderService->createOrder(300, '', '', null, 'QO-STATUS-001');
 
-        $request = new WP_REST_Request('PUT', '/quick-order/v1/orders/'.$order->get_id().'/status');
+        $request = new WP_REST_Request('PUT', '/quick-order/v1/orders/QO-STATUS-001/status');
         $request->set_param('status', 'processing');
         $request->set_param('note', '已收到款項');
 
         $response = rest_do_request($request);
 
         $this->assertEquals(200, $response->get_status());
-        $data = $response->get_data();
-        $this->assertEquals('processing', $data['status']);
+        $this->assertEquals('processing', $response->get_data()['status']);
     }
 
     public function test_update_order_status_requires_status_param()
     {
         wp_set_current_user(self::factory()->user->create(['role' => 'administrator']));
 
-        $order = $this->orderService->createOrder(100);
+        $this->orderService->createOrder(100, '', '', null, 'QO-STATUS-002');
 
-        $request = new WP_REST_Request('PUT', '/quick-order/v1/orders/'.$order->get_id().'/status');
+        $request = new WP_REST_Request('PUT', '/quick-order/v1/orders/QO-STATUS-002/status');
 
         $response = rest_do_request($request);
 
@@ -289,7 +443,7 @@ class RestApiTest extends WP_UnitTestCase
     {
         wp_set_current_user(self::factory()->user->create(['role' => 'administrator']));
 
-        $request = new WP_REST_Request('PUT', '/quick-order/v1/orders/999999/status');
+        $request = new WP_REST_Request('PUT', '/quick-order/v1/orders/UNKNOWN-999/status');
         $request->set_param('status', 'completed');
 
         $response = rest_do_request($request);
@@ -333,6 +487,53 @@ class RestApiTest extends WP_UnitTestCase
         }
     }
 
+    // ── POST /customers/link-orders ──
+
+    public function test_link_customer_orders_links_guest_orders_to_user()
+    {
+        $email = 'linkcustomer@example.com';
+        wp_set_current_user(self::factory()->user->create(['role' => 'administrator']));
+
+        // Create guest orders before the user account exists
+        update_option('quick_order_auto_create_customer', 'no');
+        $customer = \Recca0120\QuickOrder\Customer::fromArray(['email' => $email]);
+        $this->orderService->createOrder(100, '', '', $customer);
+        $this->orderService->createOrder(200, '', '', $customer);
+
+        // User registers later
+        self::factory()->user->create(['user_email' => $email]);
+
+        $request = new WP_REST_Request('POST', '/quick-order/v1/customers/link-orders');
+        $request->set_param('email', $email);
+        $response = rest_do_request($request);
+
+        $this->assertEquals(200, $response->get_status());
+        $this->assertEquals(2, $response->get_data()['linked']);
+    }
+
+    public function test_link_customer_orders_returns_zero_for_unknown_email()
+    {
+        wp_set_current_user(self::factory()->user->create(['role' => 'administrator']));
+
+        $request = new WP_REST_Request('POST', '/quick-order/v1/customers/link-orders');
+        $request->set_param('email', 'nobody@example.com');
+        $response = rest_do_request($request);
+
+        $this->assertEquals(200, $response->get_status());
+        $this->assertEquals(0, $response->get_data()['linked']);
+    }
+
+    public function test_link_customer_orders_requires_permission()
+    {
+        wp_set_current_user(self::factory()->user->create(['role' => 'subscriber']));
+
+        $request = new WP_REST_Request('POST', '/quick-order/v1/customers/link-orders');
+        $request->set_param('email', 'someone@example.com');
+        $response = rest_do_request($request);
+
+        $this->assertEquals(403, $response->get_status());
+    }
+
     // ── API Key + 新端點 ──
 
     public function test_api_key_works_for_get_order()
@@ -358,14 +559,13 @@ class RestApiTest extends WP_UnitTestCase
     {
         $apiKey = 'test-key-put';
         update_option('quick_order_api_key', $apiKey);
-        wp_set_current_user(0);
 
         $admin = self::factory()->user->create(['role' => 'administrator']);
         wp_set_current_user($admin);
-        $order = $this->orderService->createOrder(100);
+        $this->orderService->createOrder(100, '', '', null, 'QO-APIKEY-001');
         wp_set_current_user(0);
 
-        $request = new WP_REST_Request('PUT', '/quick-order/v1/orders/'.$order->get_id().'/status');
+        $request = new WP_REST_Request('PUT', '/quick-order/v1/orders/QO-APIKEY-001/status');
         $request->set_header('X-API-Key', $apiKey);
         $request->set_param('status', 'completed');
 

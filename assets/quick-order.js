@@ -47,6 +47,41 @@
         });
     });
 
+    $(document).on('submit', '#qo-link-customer-form', function (e) {
+        e.preventDefault();
+
+        var $form = $(this);
+        var $submit = $form.find('[type="submit"]');
+        var $result = $('#qo-link-result');
+
+        $submit.prop('disabled', true);
+        $result.hide();
+
+        $.ajax({
+            url: quickOrder.ajaxUrl,
+            method: 'POST',
+            data: $form.serialize() + '&action=quick_order_link_customer',
+            dataType: 'json',
+            success: function (response) {
+                if (response.success) {
+                    var msg = response.data.linked > 0
+                        ? response.data.linked + ' 筆訂單已關聯'
+                        : '無待關聯的訂單';
+                    $result.html('<div class="notice notice-success"><p>' + msg + '</p></div>').show();
+                    $form.find('#qo-link-email').val('');
+                } else {
+                    $result.html('<div class="notice notice-error"><p>' + (response.data.message || '操作失敗') + '</p></div>').show();
+                }
+            },
+            error: function () {
+                $result.html('<div class="notice notice-error"><p>請求失敗，請重試</p></div>').show();
+            },
+            complete: function () {
+                $submit.prop('disabled', false);
+            }
+        });
+    });
+
     $(document).on('click', '#qo-copy-url', function () {
         var $input = $('#qo-payment-url');
         $input.select();

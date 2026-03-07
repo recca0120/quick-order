@@ -1,15 +1,15 @@
 <?php
 
-namespace Suspended\QuickOrder;
+namespace Recca0120\QuickOrder;
 
 class RestApi
 {
-    /** @var OrderService */
-    private $orderService;
+    /** @var OrderSyncer */
+    private $orderSyncer;
 
-    public function __construct(OrderService $orderService)
+    public function __construct(?OrderSyncer $orderSyncer = null)
     {
-        $this->orderService = $orderService;
+        $this->orderSyncer = $orderSyncer ?: new OrderSyncer();
     }
 
     public function register()
@@ -32,7 +32,7 @@ class RestApi
                             return floatval($value);
                         },
                     ],
-                    'name' => [
+                    'description' => [
                         'required' => false,
                         'type' => 'string',
                         'default' => '',
@@ -44,7 +44,7 @@ class RestApi
                         'default' => '',
                         'sanitize_callback' => 'sanitize_textarea_field',
                     ],
-                ] + $this->customerArgs() + [
+                ] + $this->customerArgs() + $this->paymentArgs() + [
                     'order_number' => [
                         'required' => false,
                         'type' => 'string',
@@ -68,6 +68,12 @@ class RestApi
             ],
         ]);
 
+        register_rest_route('quick-order/v1', '/orders/sync', [
+            'methods' => 'POST',
+            'callback' => [$this, 'syncOrder'],
+            'permission_callback' => [$this, 'checkPermission'],
+        ]);
+
         register_rest_route('quick-order/v1', '/orders/(?P<id>\d+)', [
             'methods' => 'GET',
             'callback' => [$this, 'getOrder'],
@@ -81,15 +87,28 @@ class RestApi
             ],
         ]);
 
-        register_rest_route('quick-order/v1', '/orders/(?P<id>\d+)/status', [
+        register_rest_route('quick-order/v1', '/customers/link-orders', [
+            'methods' => 'POST',
+            'callback' => [$this, 'linkCustomerOrders'],
+            'permission_callback' => [$this, 'checkPermission'],
+            'args' => [
+                'email' => [
+                    'required' => true,
+                    'type' => 'string',
+                    'sanitize_callback' => 'sanitize_email',
+                ],
+            ],
+        ]);
+
+        register_rest_route('quick-order/v1', '/orders/(?P<transaction_id>[^/]+)/status', [
             'methods' => 'PUT',
             'callback' => [$this, 'updateStatus'],
             'permission_callback' => [$this, 'checkPermission'],
             'args' => [
-                'id' => [
+                'transaction_id' => [
                     'required' => true,
-                    'type' => 'integer',
-                    'sanitize_callback' => 'absint',
+                    'type' => 'string',
+                    'sanitize_callback' => 'sanitize_text_field',
                 ],
                 'status' => [
                     'required' => true,
@@ -126,24 +145,10 @@ class RestApi
     public function createOrder($request)
     {
         try {
-            $customerFields = OrderService::CUSTOMER_FIELDS;
-            $customer = [];
-            foreach ($customerFields as $field) {
-                $value = $request->get_param($field);
-                if ($value !== '' && $value !== null) {
-                    $customer[$field] = $value;
-                }
-            }
+            $params = $request->get_params();
+            $params['transaction_id'] = $params['order_number'] ?? '';
 
-            $orderNumber = $request->get_param('order_number');
-
-            $order = $this->orderService->createOrder(
-                $request->get_param('amount'),
-                $request->get_param('name'),
-                $request->get_param('note'),
-                $customer,
-                $orderNumber ?: ''
-            );
+            $order = $this->orderSyncer->syncFromData($params);
 
             return new \WP_REST_Response($this->formatOrder($order), 201);
         } catch (\Exception $e) {
@@ -151,10 +156,22 @@ class RestApi
         }
     }
 
+    public function syncOrder($request)
+    {
+        try {
+            $data = $request->get_json_params() ?: $request->get_params();
+            $order = $this->orderSyncer->syncFromData($data);
+
+            return new \WP_REST_Response($this->formatOrder($order));
+        } catch (\Exception $e) {
+            return new \WP_Error('sync_failed', $e->getMessage(), ['status' => 400]);
+        }
+    }
+
     public function getOrder($request)
     {
         try {
-            $order = $this->orderService->getOrder($request->get_param('id'));
+            $order = $this->orderSyncer->getOrder($request->get_param('id'));
 
             return new \WP_REST_Response($this->formatOrder($order));
         } catch (\InvalidArgumentException $e) {
@@ -165,16 +182,23 @@ class RestApi
     public function updateStatus($request)
     {
         try {
-            $order = $this->orderService->updateOrderStatus(
-                $request->get_param('id'),
+            $order = $this->orderSyncer->updateStatus(
+                $request->get_param('transaction_id'),
                 $request->get_param('status'),
-                $request->get_param('note')
+                $request->get_param('note') ?: ''
             );
 
             return new \WP_REST_Response($this->formatOrder($order));
         } catch (\InvalidArgumentException $e) {
             return new \WP_Error('order_not_found', $e->getMessage(), ['status' => 404]);
         }
+    }
+
+    public function linkCustomerOrders($request)
+    {
+        $linked = $this->orderSyncer->linkOrdersByEmail($request->get_param('email'));
+
+        return new \WP_REST_Response(['linked' => $linked]);
     }
 
     public function listOrders($request)
@@ -196,10 +220,20 @@ class RestApi
         return new \WP_REST_Response(array_map([$this, 'formatOrder'], $orders));
     }
 
-    private function customerArgs()
+    private function customerArgs(): array
+    {
+        return $this->stringArgs(['name', 'email', 'phone_number', 'address_1', 'city', 'postcode']);
+    }
+
+    private function paymentArgs(): array
+    {
+        return $this->stringArgs(['transaction_reference', 'gateway_name', 'payment_method', 'created_at', 'completed_at']);
+    }
+
+    private function stringArgs(array $fields): array
     {
         $args = [];
-        foreach (OrderService::CUSTOMER_FIELDS as $field) {
+        foreach ($fields as $field) {
             $args[$field] = [
                 'required' => false,
                 'type' => 'string',
@@ -211,7 +245,7 @@ class RestApi
         return $args;
     }
 
-    private function formatOrder(\WC_Order $order)
+    private function formatOrder(\WC_Order $order): array
     {
         return [
             'order_id' => $order->get_id(),

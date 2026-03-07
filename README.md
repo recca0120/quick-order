@@ -9,14 +9,16 @@
 
 ## 功能特色
 
-- 後台管理介面快速建立訂單（金額、商品名稱、備註）
+- 後台管理介面快速建立訂單（金額、商品名稱、備註、客戶資訊）
 - 自訂訂單編號（自動產生 `{前綴}-{日期}-{流水號}` 或手動填入）
 - 客戶資訊收集（Email、姓名、電話、地址）並寫入帳單欄位
-- Email 已存在自動關聯既有帳號；不存在可自動建立帳號（可於設定控制）
+- Email 已存在自動關聯既有帳號；不存在可設定是否自動建立帳號（預設關閉）
 - 自動產生付款連結，支援一鍵複製
-- REST API 支援外部系統整合
+- REST API 支援外部系統整合（建單、同步、查詢、狀態更新）
 - Shortcode `[quick_order]` 可嵌入任意頁面
 - API Key 驗證（支援 `wp-config.php` 常數或後台設定）
+- OrderSyncer 支援外部金流回調同步訂單（create-or-update）
+- 後台工具：補同步客戶關聯（將 guest 訂單補關聯到對應帳號）
 
 ## 系統需求
 
@@ -40,7 +42,8 @@
 啟用外掛後，前往 **WooCommerce → Quick Order**：
 
 - **建立訂單** — 輸入訂單編號（選填）、客戶資料（Email、姓名、電話、地址）、金額、商品名稱、備註，送出後取得付款連結
-- **設定** — 設定 API Key（用於 REST API 驗證）、自動建立帳號開關、自訂訂單編號顯示與前綴
+- **工具** — 補同步客戶關聯：輸入客戶 Email，將該 Email 的 guest 訂單補關聯到對應帳號
+- **設定** — 設定 API Key、自動建立帳號開關、自訂訂單編號顯示與前綴
 
 ### Shortcode
 
@@ -54,7 +57,9 @@
 
 ### REST API
 
-所有端點需透過 API Key 驗證，在 Header 加上 `X-API-Key`。
+所有端點需透過以下任一方式驗證：
+- 已登入且具備 `manage_woocommerce` 權限
+- Header 加上 `X-API-Key: {your-api-key}`
 
 #### 建立訂單
 
@@ -65,16 +70,36 @@ POST /wp-json/quick-order/v1/orders
 | 參數 | 類型 | 必填 | 說明 |
 |------|------|:----:|------|
 | `amount` | number | ✓ | 訂單金額 |
-| `name` | string | | 商品名稱 |
+| `description` | string | | 商品名稱 |
 | `note` | string | | 備註 |
 | `order_number` | string | | 自訂訂單編號（未填則自動產生） |
+| `name` | string | | 客戶姓名 |
 | `email` | string | | 客戶 Email |
-| `first_name` | string | | 名字 |
-| `last_name` | string | | 姓氏 |
-| `phone` | string | | 電話 |
+| `phone_number` | string | | 電話 |
 | `address_1` | string | | 地址 |
 | `city` | string | | 城市 |
 | `postcode` | string | | 郵遞區號 |
+| `transaction_reference` | string | | 金流商交易編號 |
+| `gateway_name` | string | | 金流名稱（如 `newebpay`） |
+| `payment_method` | string | | 付款方式（如 `atm`、`cvs`） |
+| `created_at` | string | | 訂單建立時間（ISO 8601） |
+| `completed_at` | string | | 付款完成時間（ISO 8601） |
+
+#### 同步訂單（create-or-update）
+
+```
+POST /wp-json/quick-order/v1/orders/sync
+```
+
+接受與建立訂單相同的欄位，另外以 `transaction_id` 作為冪等鍵：
+- `transaction_id` 不存在 → 建立新訂單
+- `transaction_id` 已存在 → 更新既有訂單（狀態、付款資訊）
+
+| 參數 | 說明 |
+|------|------|
+| `transaction_id` | 訂單唯一識別碼（對應 `_order_number`） |
+| `status` | 狀態（`new` → `pending`，其餘直接對應） |
+| 其他欄位 | 同建立訂單 |
 
 #### 查詢訂單
 
@@ -91,13 +116,99 @@ GET /wp-json/quick-order/v1/orders?status=pending
 #### 更新訂單狀態
 
 ```
-PUT /wp-json/quick-order/v1/orders/{id}/status
+PUT /wp-json/quick-order/v1/orders/{transaction_id}/status
 ```
+
+以 `transaction_id`（即 `_order_number`）識別訂單，不需要 WooCommerce 內部 ID。
 
 | 參數 | 類型 | 必填 | 說明 |
 |------|------|:----:|------|
 | `status` | string | ✓ | 訂單狀態 |
 | `note` | string | | 狀態變更備註 |
+
+#### 補同步客戶關聯
+
+```
+POST /wp-json/quick-order/v1/customers/link-orders
+```
+
+將指定 Email 的 guest 訂單（`customer_id = 0`）補關聯到對應的 WordPress 帳號。
+
+| 參數 | 類型 | 必填 | 說明 |
+|------|------|:----:|------|
+| `email` | string | ✓ | 客戶 Email |
+
+回應：`{ "linked": 2 }`（已關聯的訂單數）
+
+### OrderSyncer
+
+`OrderSyncer` 負責接收外部金流回調資料並同步到 WooCommerce 訂單。無外部依賴（不需要 PSR-7），可在任何環境中使用。
+
+#### 基本用法
+
+```php
+use Recca0120\QuickOrder\OrderSyncer;
+
+$syncer = new OrderSyncer();
+
+// 傳入 base64 編碼的 JSON 字串，回傳同步後的訂單（或 null）
+$order = $syncer->sync($base64EncodedJson);
+
+// 直接傳入資料陣列
+$order = $syncer->syncFromData($data);
+```
+
+#### 資料格式
+
+傳入 `sync()` 的字串為 base64 編碼的 JSON，解碼後的結構：
+
+| 欄位 | 類型 | 說明 |
+|------|------|------|
+| `transaction_id` | string | 訂單唯一識別碼（對應 `_order_number`，用於 create-or-update） |
+| `transaction_reference` | string | 金流商回傳的交易編號 |
+| `gateway_name` | string | 金流名稱（如 `newebpay`） |
+| `payment_method` | string | 付款方式（如 `atm`、`cvs`） |
+| `amount` | number | 金額 |
+| `description` | string | 商品名稱 |
+| `note` | string | 備註 |
+| `status` | string | 狀態（`new` → `pending`，其餘直接對應） |
+| `created_at` | string | 訂單建立時間（ISO 8601） |
+| `completed_at` | string | 付款完成時間（ISO 8601） |
+| `name` | string | 客戶姓名 |
+| `email` | string | 客戶 Email |
+| `phone_number` | string | 電話 |
+| `address_1` | string | 地址 |
+| `city` | string | 城市 |
+| `postcode` | string | 郵遞區號 |
+| 其他欄位 | any | 自動存為 `_payment_{欄位名}` meta |
+
+範例 JSON：
+
+```json
+{
+    "transaction_id": "QO-20260302-001",
+    "transaction_reference": "GW-REF-001",
+    "gateway_name": "newebpay",
+    "payment_method": "atm",
+    "amount": 1000,
+    "description": "測試商品",
+    "status": "completed",
+    "created_at": "2026-03-02T10:00:00.000000Z",
+    "completed_at": "2026-03-02T10:30:00.000000Z",
+    "name": "王小明",
+    "email": "wang@example.com",
+    "phone_number": "0912345678",
+    "bank_code": "001",
+    "account_number": "12345678901"
+}
+```
+
+#### 行為說明
+
+- **新訂單**：`transaction_id` 不存在時建立新 WooCommerce 訂單
+- **重複通知**：`transaction_id` 已存在時更新既有訂單（狀態、付款資訊）
+- **動態欄位**：固定欄位以外的資料（如 `bank_code`、`account_number`）自動存為 `_payment_*` order meta
+- **Gateway ID**：由 `gateway_name` + `payment_method` 組合，格式為 `omnipay_{gateway}_{method}`；`bank-transfer` 例外，固定為 `omnipay_banktransfer`
 
 ## 自訂訂單編號
 
@@ -113,11 +224,11 @@ PUT /wp-json/quick-order/v1/orders/{id}/status
 當訂單帶有 Email 時：
 
 - **Email 已存在** → 自動關聯既有 WordPress/WooCommerce 帳號
-- **Email 不存在 + 自動建立帳號開啟** → 透過 `wc_create_new_customer()` 建立新帳號並關聯
-- **Email 不存在 + 自動建立帳號關閉** → 僅填入帳單資訊，不建立帳號（guest order）
+- **Email 不存在 + 自動建立帳號開啟** → 透過 `wc_create_new_customer()` 建立新帳號（以 `phone_number` 為密碼，未提供則隨機產生）
+- **Email 不存在 + 自動建立帳號關閉（預設）** → 僅填入帳單資訊，不建立帳號（guest order）
 - **無 Email** → guest order，行為不變
 
-自動建立帳號可在 **WooCommerce → Quick Order → 設定** 中控制（預設開啟）。
+> **建議**：保持預設的關閉狀態。客戶自行在前台註冊後，可在後台「工具」頁使用「補同步關聯」功能，或透過 `POST /customers/link-orders` API，將過去的 guest 訂單補關聯到對應帳號。
 
 ## API Key 設定
 

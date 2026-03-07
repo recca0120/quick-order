@@ -15,6 +15,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, intl, pdo_sqlite
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress --no-dev --optimize-autoloader
+
+      - name: Download and run Strauss
+        run: |
+          mkdir -p bin
+          curl -o bin/strauss.phar -L https://github.com/BrianHenryIE/strauss/releases/latest/download/strauss.phar
+          php bin/strauss.phar --updateCallSites=src,quick-order.php
+
       - name: Create plugin directory
         run: |
           mkdir -p build/quick-order
@@ -22,9 +37,7 @@ jobs:
           rsync -av --progress . build/quick-order \
             --exclude='.git' \
             --exclude='.github' \
-            --exclude='.claude' \
             --exclude='.wordpress-test' \
-            --exclude='bin' \
             --exclude='build' \
             --exclude='tests' \
             --exclude='phpunit.xml' \
@@ -32,7 +45,6 @@ jobs:
             --exclude='.gitignore' \
             --exclude='composer.json' \
             --exclude='composer.lock' \
-            --exclude='*.md' \
             --exclude='coverage' \
             --exclude='.phpunit.cache' \
             --exclude='.phpunit.result.cache' \

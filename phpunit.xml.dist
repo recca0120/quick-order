@@ -14,8 +14,7 @@
     <php>
         <env name="WP_PHPUNIT__TESTS_CONFIG" value="tests/wp-config.php"/>
         <env name="DB_ENGINE" value="sqlite"/>
-        <env name="DB_FILE" value="test.sqlite"/>
-        <env name="DB_DIR" value="/tmp/wp-phpunit-tests/"/>
+        <env name="DB_FILE" value=":memory:"/>
     </php>
     <coverage processUncoveredFiles="true">
         <include>

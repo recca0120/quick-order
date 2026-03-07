@@ -1,6 +1,6 @@
 <?php
 
-namespace Suspended\QuickOrder;
+namespace Recca0120\QuickOrder;
 
 class Shortcode
 {
@@ -28,9 +28,7 @@ class Shortcode
         ob_start();
         echo '<div id="quick-order-app" class="quick-order-frontend">';
         $this->orderForm->render();
-        ?>
-        <?php $this->orderForm->renderResult(); ?>
-        <?php
+        $this->orderForm->renderResult();
         echo '</div>';
 
         return ob_get_clean();
