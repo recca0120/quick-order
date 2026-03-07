@@ -1,0 +1,56 @@
+name: Release
+
+on:
+  release:
+    types: [created]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create plugin directory
+        run: |
+          mkdir -p build/quick-order
+
+          rsync -av --progress . build/quick-order \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='.claude' \
+            --exclude='.wordpress-test' \
+            --exclude='bin' \
+            --exclude='build' \
+            --exclude='tests' \
+            --exclude='phpunit.xml' \
+            --exclude='phpunit.xml.dist' \
+            --exclude='.gitignore' \
+            --exclude='composer.json' \
+            --exclude='composer.lock' \
+            --exclude='*.md' \
+            --exclude='coverage' \
+            --exclude='.phpunit.cache' \
+            --exclude='.phpunit.result.cache' \
+            --exclude='vendor' \
+            --exclude='lefthook.yml' \
+            --exclude='pint.json'
+
+          cp LICENSE build/quick-order/ 2>/dev/null || true
+          cp README.md build/quick-order/ 2>/dev/null || true
+
+      - name: Create ZIP archive
+        run: |
+          cd build
+          zip -r quick-order.zip quick-order
+
+      - name: Upload Release Assets
+        uses: softprops/action-gh-release@v1
+        with:
+          files: build/quick-order.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
