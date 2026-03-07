@@ -27,7 +27,9 @@ abstract class AbstractCreateOrder implements MiddlewareInterface
         $order = $this->orderService->createOrder(
             $data['amount'],
             $data['name'] ?? '',
-            $data['note'] ?? ''
+            $data['note'] ?? '',
+            $data['customer'] ?? [],
+            $data['order_number'] ?? ''
         );
 
         $request = $this->injectOrderToRequest($request, $order);
@@ -36,7 +38,7 @@ abstract class AbstractCreateOrder implements MiddlewareInterface
     }
 
     /**
-     * @return array{amount: float, name?: string, note?: string}
+     * @return array{amount: float, name?: string, note?: string, customer?: array, order_number?: string}
      */
     abstract protected function extractOrderData(ServerRequestInterface $request): array;
 

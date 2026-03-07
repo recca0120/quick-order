@@ -50,4 +50,52 @@ class AbstractCreateOrderTest extends WP_UnitTestCase
 
         $this->assertEquals(200, $response->getStatusCode());
     }
+
+    public function test_creates_order_with_customer_and_order_number()
+    {
+        $middleware = new class(new OrderService) extends AbstractCreateOrder
+        {
+            protected function extractOrderData(ServerRequestInterface $request): array
+            {
+                $body = json_decode((string) $request->getBody(), true);
+
+                return [
+                    'amount' => $body['amount'],
+                    'name' => $body['name'] ?? '',
+                    'note' => $body['note'] ?? '',
+                    'customer' => $body['customer'] ?? [],
+                    'order_number' => $body['order_number'] ?? '',
+                ];
+            }
+
+            protected function injectOrderToRequest(ServerRequestInterface $request, \WC_Order $order): ServerRequestInterface
+            {
+                return $request;
+            }
+        };
+
+        $payload = json_encode([
+            'amount' => 200,
+            'customer' => [
+                'email' => 'middleware@example.com',
+                'first_name' => 'Mid',
+            ],
+            'order_number' => 'MW-001',
+        ]);
+
+        $capturedOrder = null;
+        $request = new ServerRequest('POST', '/api/orders', ['Content-Type' => 'application/json'], $payload);
+
+        $middleware->process($request, function ($req) use (&$capturedOrder) {
+            return new Response(200);
+        });
+
+        // Verify the last created order has customer and order number
+        $orders = wc_get_orders(['limit' => 1, 'orderby' => 'date', 'order' => 'DESC']);
+        $order = $orders[0];
+
+        $this->assertEquals('middleware@example.com', $order->get_billing_email());
+        $this->assertEquals('Mid', $order->get_billing_first_name());
+        $this->assertEquals('MW-001', $order->get_meta('_order_number'));
+    }
 }

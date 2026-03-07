@@ -10,6 +10,9 @@
 ## 功能特色
 
 - 後台管理介面快速建立訂單（金額、商品名稱、備註）
+- 自訂訂單編號（自動產生 `{前綴}-{日期}-{流水號}` 或手動填入）
+- 客戶資訊收集（Email、姓名、電話、地址）並寫入帳單欄位
+- Email 已存在自動關聯既有帳號；不存在可自動建立帳號（可於設定控制）
 - 自動產生付款連結，支援一鍵複製
 - REST API 支援外部系統整合
 - Shortcode `[quick_order]` 可嵌入任意頁面
@@ -36,8 +39,8 @@
 
 啟用外掛後，前往 **WooCommerce → Quick Order**：
 
-- **建立訂單** — 輸入金額、商品名稱、備註，送出後取得付款連結
-- **設定** — 設定 API Key（用於 REST API 驗證）
+- **建立訂單** — 輸入訂單編號（選填）、客戶資料（Email、姓名、電話、地址）、金額、商品名稱、備註，送出後取得付款連結
+- **設定** — 設定 API Key（用於 REST API 驗證）、自動建立帳號開關、自訂訂單編號顯示與前綴
 
 ### Shortcode
 
@@ -64,6 +67,14 @@ POST /wp-json/quick-order/v1/orders
 | `amount` | number | ✓ | 訂單金額 |
 | `name` | string | | 商品名稱 |
 | `note` | string | | 備註 |
+| `order_number` | string | | 自訂訂單編號（未填則自動產生） |
+| `email` | string | | 客戶 Email |
+| `first_name` | string | | 名字 |
+| `last_name` | string | | 姓氏 |
+| `phone` | string | | 電話 |
+| `address_1` | string | | 地址 |
+| `city` | string | | 城市 |
+| `postcode` | string | | 郵遞區號 |
 
 #### 查詢訂單
 
@@ -87,6 +98,26 @@ PUT /wp-json/quick-order/v1/orders/{id}/status
 |------|------|:----:|------|
 | `status` | string | ✓ | 訂單狀態 |
 | `note` | string | | 狀態變更備註 |
+
+## 自訂訂單編號
+
+每筆 Quick Order 訂單會自動產生格式化編號，例如 `QO-20260302-001`：
+
+- **格式**：`{前綴}-{YYYYMMDD}-{當日流水號}`
+- **手動填入**：建立訂單時可自行指定編號，未填則自動產生
+- **顯示控制**：可在設定頁開關是否在 WooCommerce 中顯示自訂編號（預設開啟）
+- **前綴自訂**：可在設定頁修改前綴（預設 `QO`）
+
+## 客戶帳號設定
+
+當訂單帶有 Email 時：
+
+- **Email 已存在** → 自動關聯既有 WordPress/WooCommerce 帳號
+- **Email 不存在 + 自動建立帳號開啟** → 透過 `wc_create_new_customer()` 建立新帳號並關聯
+- **Email 不存在 + 自動建立帳號關閉** → 僅填入帳單資訊，不建立帳號（guest order）
+- **無 Email** → guest order，行為不變
+
+自動建立帳號可在 **WooCommerce → Quick Order → 設定** 中控制（預設開啟）。
 
 ## API Key 設定
 

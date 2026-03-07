@@ -44,6 +44,13 @@ class RestApi
                         'default' => '',
                         'sanitize_callback' => 'sanitize_textarea_field',
                     ],
+                ] + $this->customerArgs() + [
+                    'order_number' => [
+                        'required' => false,
+                        'type' => 'string',
+                        'default' => '',
+                        'sanitize_callback' => 'sanitize_text_field',
+                    ],
                 ],
             ],
             [
@@ -119,10 +126,23 @@ class RestApi
     public function createOrder($request)
     {
         try {
+            $customerFields = OrderService::CUSTOMER_FIELDS;
+            $customer = [];
+            foreach ($customerFields as $field) {
+                $value = $request->get_param($field);
+                if ($value !== '' && $value !== null) {
+                    $customer[$field] = $value;
+                }
+            }
+
+            $orderNumber = $request->get_param('order_number');
+
             $order = $this->orderService->createOrder(
                 $request->get_param('amount'),
                 $request->get_param('name'),
-                $request->get_param('note')
+                $request->get_param('note'),
+                $customer,
+                $orderNumber ?: ''
             );
 
             return new \WP_REST_Response($this->formatOrder($order), 201);
@@ -176,10 +196,26 @@ class RestApi
         return new \WP_REST_Response(array_map([$this, 'formatOrder'], $orders));
     }
 
+    private function customerArgs()
+    {
+        $args = [];
+        foreach (OrderService::CUSTOMER_FIELDS as $field) {
+            $args[$field] = [
+                'required' => false,
+                'type' => 'string',
+                'default' => '',
+                'sanitize_callback' => $field === 'email' ? 'sanitize_email' : 'sanitize_text_field',
+            ];
+        }
+
+        return $args;
+    }
+
     private function formatOrder(\WC_Order $order)
     {
         return [
             'order_id' => $order->get_id(),
+            'order_number' => $order->get_meta('_order_number') ?: '',
             'payment_url' => $order->get_checkout_payment_url(),
             'total' => $order->get_total(),
             'status' => $order->get_status(),

@@ -5,7 +5,6 @@ namespace Suspended\QuickOrder\Tests\Integration;
 use Suspended\QuickOrder\OrderService;
 use Suspended\QuickOrder\RestApi;
 use WP_REST_Request;
-use WP_REST_Server;
 use WP_UnitTestCase;
 
 class RestApiTest extends WP_UnitTestCase
@@ -17,9 +16,6 @@ class RestApiTest extends WP_UnitTestCase
     {
         parent::setUp();
 
-        global $wp_rest_server;
-        $wp_rest_server = new WP_REST_Server;
-
         $this->orderService = new OrderService;
         $restApi = new RestApi($this->orderService);
         $restApi->register();
@@ -29,9 +25,6 @@ class RestApiTest extends WP_UnitTestCase
 
     protected function tearDown(): void
     {
-        global $wp_rest_server;
-        $wp_rest_server = null;
-
         delete_option('quick_order_api_key');
         parent::tearDown();
     }
@@ -92,6 +85,60 @@ class RestApiTest extends WP_UnitTestCase
         $this->assertEquals(201, $response->get_status());
         $data = $response->get_data();
         $this->assertEquals('500.00', $data['total']);
+    }
+
+    public function test_create_order_with_customer_data()
+    {
+        wp_set_current_user(self::factory()->user->create(['role' => 'administrator']));
+
+        $request = new WP_REST_Request('POST', '/quick-order/v1/orders');
+        $request->set_param('amount', 300);
+        $request->set_param('email', 'rest-customer@example.com');
+        $request->set_param('first_name', 'Rest');
+        $request->set_param('last_name', 'Client');
+        $request->set_param('phone', '0922222222');
+        $request->set_param('address_1', '忠孝東路');
+        $request->set_param('city', '台北市');
+        $request->set_param('postcode', '100');
+
+        $response = rest_do_request($request);
+
+        $this->assertEquals(201, $response->get_status());
+        $data = $response->get_data();
+        $order = wc_get_order($data['order_id']);
+        $this->assertEquals('rest-customer@example.com', $order->get_billing_email());
+        $this->assertEquals('Rest', $order->get_billing_first_name());
+        $this->assertEquals('0922222222', $order->get_billing_phone());
+    }
+
+    public function test_create_order_returns_auto_generated_order_number()
+    {
+        wp_set_current_user(self::factory()->user->create(['role' => 'administrator']));
+
+        $request = new WP_REST_Request('POST', '/quick-order/v1/orders');
+        $request->set_param('amount', 100);
+
+        $response = rest_do_request($request);
+
+        $this->assertEquals(201, $response->get_status());
+        $data = $response->get_data();
+        $this->assertArrayHasKey('order_number', $data);
+        $this->assertNotEmpty($data['order_number']);
+    }
+
+    public function test_create_order_with_custom_order_number()
+    {
+        wp_set_current_user(self::factory()->user->create(['role' => 'administrator']));
+
+        $request = new WP_REST_Request('POST', '/quick-order/v1/orders');
+        $request->set_param('amount', 100);
+        $request->set_param('order_number', 'EXT-12345');
+
+        $response = rest_do_request($request);
+
+        $this->assertEquals(201, $response->get_status());
+        $data = $response->get_data();
+        $this->assertEquals('EXT-12345', $data['order_number']);
     }
 
     // ── API Key 認證 ──
