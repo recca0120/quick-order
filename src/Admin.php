@@ -62,10 +62,6 @@ class Admin
 
     public function renderAutoCreateCustomerField(): void
     {
-        if (Config::isOverridden('quick_order_auto_create_customer')) {
-            return;
-        }
-
         $this->renderCheckboxField('quick_order_auto_create_customer', 'no', __('當客戶 Email 不存在時自動建立帳號', 'quick-order'));
     }
 
@@ -83,10 +79,6 @@ class Admin
 
     public function renderApiKeyField(): void
     {
-        if (Config::isOverridden('quick_order_api_key')) {
-            return;
-        }
-
         $value = get_option('quick_order_api_key', '');
         echo '<input type="text" name="quick_order_api_key" value="'.esc_attr($value).'" class="regular-text">';
     }
@@ -188,10 +180,6 @@ class Admin
 
     public function renderSerialSaltField(): void
     {
-        if (Config::isOverridden('quick_order_serial_salt')) {
-            return;
-        }
-
         $value = get_option('quick_order_serial_salt', '');
         echo '<input type="text" name="quick_order_serial_salt" value="'.esc_attr($value).'" class="regular-text">';
         echo '<p class="description">'.esc_html__('用於產生序號的 Salt，留空則不產生序號', 'quick-order').'</p>';
@@ -211,7 +199,9 @@ class Admin
         ]);
 
         add_settings_section('quick_order_api_section', __('API 設定', 'quick-order'), null, 'quick-order-settings');
-        add_settings_field('quick_order_api_key', __('API Key', 'quick-order'), [$this, 'renderApiKeyField'], 'quick-order-settings', 'quick_order_api_section');
+        if (! Config::isOverridden('quick_order_api_key')) {
+            add_settings_field('quick_order_api_key', __('API Key', 'quick-order'), [$this, 'renderApiKeyField'], 'quick-order-settings', 'quick_order_api_section');
+        }
     }
 
     private function registerCustomerSettings(): void
@@ -223,7 +213,9 @@ class Admin
         ]);
 
         add_settings_section('quick_order_customer_section', __('客戶設定', 'quick-order'), null, 'quick-order-settings');
-        add_settings_field('quick_order_auto_create_customer', __('自動建立帳號', 'quick-order'), [$this, 'renderAutoCreateCustomerField'], 'quick-order-settings', 'quick_order_customer_section');
+        if (! Config::isOverridden('quick_order_auto_create_customer')) {
+            add_settings_field('quick_order_auto_create_customer', __('自動建立帳號', 'quick-order'), [$this, 'renderAutoCreateCustomerField'], 'quick-order-settings', 'quick_order_customer_section');
+        }
     }
 
     private function registerOrderNumberSettings(): void
@@ -261,7 +253,9 @@ class Admin
 
         add_settings_section('quick_order_serial_section', __('序號設定', 'quick-order'), null, 'quick-order-settings');
         add_settings_field('quick_order_serial_enabled', __('啟用序號', 'quick-order'), [$this, 'renderSerialEnabledField'], 'quick-order-settings', 'quick_order_serial_section');
-        add_settings_field('quick_order_serial_salt', __('序號 Salt', 'quick-order'), [$this, 'renderSerialSaltField'], 'quick-order-settings', 'quick_order_serial_section');
+        if (! Config::isOverridden('quick_order_serial_salt')) {
+            add_settings_field('quick_order_serial_salt', __('序號 Salt', 'quick-order'), [$this, 'renderSerialSaltField'], 'quick-order-settings', 'quick_order_serial_section');
+        }
     }
 
     private function requireAjaxPermission(string $nonce): void

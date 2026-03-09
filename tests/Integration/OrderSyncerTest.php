@@ -268,6 +268,50 @@ class OrderSyncerTest extends WP_UnitTestCase
         $this->assertEquals('omnipay_newebpay_atm', $order->get_payment_method());
     }
 
+    // ── ATM 後 5 碼 ────────────────────────────────────────────
+
+    public function test_atm_sync_stores_last5_digits_of_account_number()
+    {
+        $order = $this->runWithResponseHeader(array_merge($this->paymentData, [
+            'payment_method' => 'atm',
+            'account_number' => '12345678901',
+        ]));
+
+        $this->assertEquals('78901', $order->get_meta('_omnipay_remittance_last5'));
+    }
+
+    public function test_atm_sync_truncates_from_full_16_digit_account()
+    {
+        $order = $this->runWithResponseHeader(array_merge($this->paymentData, [
+            'payment_method' => 'atm',
+            'account_number' => '1234567890123456',
+        ]));
+
+        $this->assertEquals('23456', $order->get_meta('_omnipay_remittance_last5'));
+    }
+
+    public function test_non_atm_sync_does_not_store_remittance_last5()
+    {
+        $order = $this->runWithResponseHeader(array_merge($this->paymentData, [
+            'payment_method' => 'cvs',
+            'account_number' => '12345678901',
+        ]));
+
+        $this->assertEmpty($order->get_meta('_omnipay_remittance_last5'));
+    }
+
+    public function test_atm_sync_without_account_number_does_not_store_remittance_last5()
+    {
+        $data = $this->paymentData;
+        unset($data['account_number']);
+
+        $order = $this->runWithResponseHeader(array_merge($data, [
+            'payment_method' => 'atm',
+        ]));
+
+        $this->assertEmpty($order->get_meta('_omnipay_remittance_last5'));
+    }
+
     // ── 空值不建立訂單 ──────────────────────────────────────────
 
     public function test_does_not_create_order_when_header_is_empty()

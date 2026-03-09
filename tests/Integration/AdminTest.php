@@ -424,47 +424,62 @@ class AdminTest extends WP_Ajax_UnitTestCase
         $this->assertStringNotContainsString('disabled', $html);
     }
 
-    public function test_api_key_field_is_hidden_when_filter_set()
+    public function test_api_key_row_is_absent_from_settings_page_when_filter_set()
     {
+        global $wp_settings_fields;
+        $wp_settings_fields['quick-order-settings'] = [];
+
         add_filter('quick_order_api_key', function () {
             return 'from-filter';
         });
 
+        do_action('admin_init');
+
         ob_start();
-        $this->admin->renderApiKeyField();
+        $this->admin->renderPage();
         $html = ob_get_clean();
 
-        $this->assertEmpty($html);
+        $this->assertStringNotContainsString('quick_order_api_key', $html);
 
         remove_all_filters('quick_order_api_key');
     }
 
-    public function test_serial_salt_field_is_hidden_when_filter_set()
+    public function test_serial_salt_row_is_absent_from_settings_page_when_filter_set()
     {
+        global $wp_settings_fields;
+        $wp_settings_fields['quick-order-settings'] = [];
+
         add_filter('quick_order_serial_salt', function () {
             return 'from-filter';
         });
 
+        do_action('admin_init');
+
         ob_start();
-        $this->admin->renderSerialSaltField();
+        $this->admin->renderPage();
         $html = ob_get_clean();
 
-        $this->assertEmpty($html);
+        $this->assertStringNotContainsString('quick_order_serial_salt', $html);
 
         remove_all_filters('quick_order_serial_salt');
     }
 
-    public function test_auto_create_customer_field_is_hidden_when_filter_set()
+    public function test_auto_create_customer_row_is_absent_from_settings_page_when_filter_set()
     {
+        global $wp_settings_fields;
+        $wp_settings_fields['quick-order-settings'] = [];
+
         add_filter('quick_order_auto_create_customer', function () {
             return 'yes';
         });
 
+        do_action('admin_init');
+
         ob_start();
-        $this->admin->renderAutoCreateCustomerField();
+        $this->admin->renderPage();
         $html = ob_get_clean();
 
-        $this->assertEmpty($html);
+        $this->assertStringNotContainsString('quick_order_auto_create_customer', $html);
 
         remove_all_filters('quick_order_auto_create_customer');
     }

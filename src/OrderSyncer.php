@@ -150,6 +150,21 @@ class OrderSyncer
         $this->applyDates($order, $data);
         $this->applyPaymentMethod($order, $data);
         $this->applyExtraFields($order, $data);
+        $this->applyRemittanceLast5($order, $data);
+    }
+
+    private function applyRemittanceLast5(\WC_Order $order, array $data): void
+    {
+        if (($data['payment_method'] ?? '') !== 'atm') {
+            return;
+        }
+
+        $accountNumber = $data['account_number'] ?? '';
+        if ($accountNumber === '') {
+            return;
+        }
+
+        $order->update_meta_data('_omnipay_remittance_last5', substr($accountNumber, -5));
     }
 
     private function applyDates(\WC_Order $order, array $data): void
