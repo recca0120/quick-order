@@ -28,7 +28,7 @@ class Admin
         }
     }
 
-    public function filterOrderNumber($orderNumber, $order)
+    public static function filterOrderNumber($orderNumber, $order)
     {
         $custom = $order->get_meta('_order_number');
 
@@ -55,28 +55,22 @@ class Admin
         $this->registerSerialSettings();
     }
 
-    public function sanitizeCheckbox($value)
+    public static function sanitizeCheckbox($value)
     {
         return $value === 'yes' ? 'yes' : 'no';
     }
 
     public function renderAutoCreateCustomerField()
     {
-        $value = get_option('quick_order_auto_create_customer', 'no');
-        echo '<label><input type="checkbox" name="quick_order_auto_create_customer" value="yes"'.checked($value, 'yes', false).'>';
-        esc_html_e('當客戶 Email 不存在時自動建立帳號', 'quick-order');
-        echo '</label>';
+        $this->renderCheckboxField('quick_order_auto_create_customer', 'no', __('當客戶 Email 不存在時自動建立帳號', 'quick-order'));
     }
 
     public function renderCustomOrderNumberField()
     {
-        $value = get_option('quick_order_custom_order_number', 'yes');
-        echo '<label><input type="checkbox" name="quick_order_custom_order_number" value="yes"'.checked($value, 'yes', false).'>';
-        esc_html_e('在 WooCommerce 中顯示自訂訂單編號', 'quick-order');
-        echo '</label>';
+        $this->renderCheckboxField('quick_order_custom_order_number', 'yes', __('在 WooCommerce 中顯示自訂訂單編號', 'quick-order'));
     }
 
-    public function renderOrderPrefixField()
+    public static function renderOrderPrefixField()
     {
         $value = get_option('quick_order_order_prefix', 'QO');
         echo '<input type="text" name="quick_order_order_prefix" value="'.esc_attr($value).'" class="regular-text">';
@@ -85,17 +79,11 @@ class Admin
 
     public function renderApiKeyField()
     {
-        $constantKey = Config::apiKeyFromConstant();
-        if ($constantKey) {
-            $masked = str_repeat('*', strlen($constantKey));
-            echo '<input type="text" value="'.esc_attr($masked).'" class="regular-text" disabled>';
-            echo '<p class="description">'.esc_html__('API Key 已透過常數 QUICK_ORDER_API_KEY 設定', 'quick-order').'</p>';
-
-            return;
-        }
-
-        $value = get_option('quick_order_api_key', '');
-        echo '<input type="text" name="quick_order_api_key" value="'.esc_attr($value).'" class="regular-text">';
+        $this->renderConstantOrOptionField(
+            Config::apiKeyFromConstant(),
+            'quick_order_api_key',
+            __('API Key 已透過常數 QUICK_ORDER_API_KEY 設定', 'quick-order')
+        );
     }
 
     public function renderPage()
@@ -156,6 +144,8 @@ class Admin
         $email = sanitize_email(wp_unslash($_POST['email'] ?? ''));
         if (! $email) {
             wp_send_json_error(['message' => __('請輸入有效的 Email', 'quick-order')], 400);
+
+            return;
         }
 
         $linked = $this->orderService->linkOrdersByEmail($email);
@@ -167,13 +157,12 @@ class Admin
         $this->requireAjaxPermission('quick_order_create');
 
         try {
-            $post = wp_unslash($_POST);
             $order = $this->orderService->createOrder(
-                floatval($post['amount'] ?? 0),
-                sanitize_text_field($post['description'] ?? ''),
-                sanitize_textarea_field($post['note'] ?? ''),
+                floatval(sanitize_text_field(wp_unslash($_POST['amount'] ?? 0))),
+                sanitize_text_field(wp_unslash($_POST['description'] ?? '')),
+                sanitize_textarea_field(wp_unslash($_POST['note'] ?? '')),
                 Customer::fromPost($_POST),
-                sanitize_text_field($post['order_number'] ?? '')
+                sanitize_text_field(wp_unslash($_POST['order_number'] ?? ''))
             );
 
             wp_send_json_success([
@@ -189,26 +178,40 @@ class Admin
 
     public function renderSerialEnabledField(): void
     {
-        $value = get_option('quick_order_serial_enabled', 'no');
-        echo '<label><input type="checkbox" name="quick_order_serial_enabled" value="yes"'.checked($value, 'yes', false).'>';
-        esc_html_e('建立訂單時自動產生序號', 'quick-order');
-        echo '</label>';
+        $this->renderCheckboxField('quick_order_serial_enabled', 'no', __('建立訂單時自動產生序號', 'quick-order'));
     }
 
     public function renderSerialSaltField(): void
     {
-        $constantSalt = Config::serialSaltFromConstant();
-        if ($constantSalt) {
-            $masked = str_repeat('*', strlen($constantSalt));
+        $this->renderConstantOrOptionField(
+            Config::serialSaltFromConstant(),
+            'quick_order_serial_salt',
+            __('序號 Salt 已透過常數 QUICK_ORDER_SERIAL_SALT 設定', 'quick-order'),
+            __('用於產生序號的 Salt，留空則不產生序號', 'quick-order')
+        );
+    }
+
+    private function renderConstantOrOptionField($constantValue, string $optionKey, string $constantNote, string $description = ''): void
+    {
+        if ($constantValue) {
+            $masked = str_repeat('*', strlen($constantValue));
             echo '<input type="text" value="'.esc_attr($masked).'" class="regular-text" disabled>';
-            echo '<p class="description">'.esc_html__('序號 Salt 已透過常數 QUICK_ORDER_SERIAL_SALT 設定', 'quick-order').'</p>';
+            echo '<p class="description">'.esc_html($constantNote).'</p>';
 
             return;
         }
 
-        $value = get_option('quick_order_serial_salt', '');
-        echo '<input type="text" name="quick_order_serial_salt" value="'.esc_attr($value).'" class="regular-text">';
-        echo '<p class="description">'.esc_html__('用於產生序號的 Salt，留空則不產生序號', 'quick-order').'</p>';
+        $value = get_option($optionKey, '');
+        echo '<input type="text" name="'.esc_attr($optionKey).'" value="'.esc_attr($value).'" class="regular-text">';
+        if ($description !== '') {
+            echo '<p class="description">'.esc_html($description).'</p>';
+        }
+    }
+
+    private function renderCheckboxField(string $option, string $default, string $label): void
+    {
+        $value = get_option($option, $default);
+        echo '<label><input type="checkbox" name="'.esc_attr($option).'" value="yes"'.checked($value, 'yes', false).'>'.esc_html($label).'</label>';
     }
 
     private function registerApiSettings(): void
@@ -278,6 +281,8 @@ class Admin
 
         if (! current_user_can('manage_woocommerce')) {
             wp_send_json_error(['message' => __('權限不足', 'quick-order')], 403);
+
+            return;
         }
     }
 }

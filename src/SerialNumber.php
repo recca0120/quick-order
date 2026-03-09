@@ -25,7 +25,7 @@ class SerialNumber
         if ($plainText) {
             echo esc_html__('序號', 'quick-order').': '.esc_html($serial)."\n";
         } else {
-            echo '<p><strong>'.esc_html__('序號', 'quick-order').':</strong> '.esc_html($serial).'</p>';
+            $this->renderSerialHtml($serial);
         }
     }
 
@@ -36,6 +36,11 @@ class SerialNumber
             return;
         }
 
+        $this->renderSerialHtml($serial);
+    }
+
+    private function renderSerialHtml(string $serial): void
+    {
         echo '<p><strong>'.esc_html__('序號', 'quick-order').':</strong> '.esc_html($serial).'</p>';
     }
 }

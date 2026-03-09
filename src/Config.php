@@ -11,16 +11,7 @@ class Config
 
     public static function apiKeyFromConstant()
     {
-        $value = apply_filters('quick_order_api_key_override', null);
-        if ($value) {
-            return $value;
-        }
-
-        if (defined('QUICK_ORDER_API_KEY')) {
-            return QUICK_ORDER_API_KEY;
-        }
-
-        return null;
+        return self::fromConstant('quick_order_api_key_override', 'QUICK_ORDER_API_KEY');
     }
 
     public static function serialSalt()
@@ -30,13 +21,18 @@ class Config
 
     public static function serialSaltFromConstant()
     {
-        $value = apply_filters('quick_order_serial_salt_override', null);
+        return self::fromConstant('quick_order_serial_salt_override', 'QUICK_ORDER_SERIAL_SALT');
+    }
+
+    private static function fromConstant(string $filter, string $constant)
+    {
+        $value = apply_filters($filter, null);
         if ($value) {
             return $value;
         }
 
-        if (defined('QUICK_ORDER_SERIAL_SALT')) {
-            return QUICK_ORDER_SERIAL_SALT;
+        if (defined($constant)) {
+            return constant($constant);
         }
 
         return null;
