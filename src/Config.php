@@ -4,37 +4,23 @@ namespace Recca0120\QuickOrder;
 
 class Config
 {
-    public static function apiKey()
+    public static function apiKey(): string
     {
-        return self::apiKeyFromConstant() ?: get_option('quick_order_api_key');
+        return (string) apply_filters('quick_order_api_key', get_option('quick_order_api_key', ''));
     }
 
-    public static function apiKeyFromConstant()
+    public static function serialSalt(): string
     {
-        return self::fromConstant('quick_order_api_key_override', 'QUICK_ORDER_API_KEY');
+        return (string) apply_filters('quick_order_serial_salt', get_option('quick_order_serial_salt', ''));
     }
 
-    public static function serialSalt()
+    public static function autoCreateCustomer(): string
     {
-        return self::serialSaltFromConstant() ?: get_option('quick_order_serial_salt', '');
+        return (string) apply_filters('quick_order_auto_create_customer', get_option('quick_order_auto_create_customer', 'no'));
     }
 
-    public static function serialSaltFromConstant()
+    public static function isOverridden(string $filter): bool
     {
-        return self::fromConstant('quick_order_serial_salt_override', 'QUICK_ORDER_SERIAL_SALT');
-    }
-
-    private static function fromConstant(string $filter, string $constant)
-    {
-        $value = apply_filters($filter, null);
-        if ($value) {
-            return $value;
-        }
-
-        if (defined($constant)) {
-            return constant($constant);
-        }
-
-        return null;
+        return apply_filters($filter, null) !== null;
     }
 }

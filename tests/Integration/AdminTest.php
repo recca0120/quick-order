@@ -137,25 +137,6 @@ class AdminTest extends WP_Ajax_UnitTestCase
         $this->assertStringNotContainsString('disabled', $html);
     }
 
-    public function test_api_key_field_shows_disabled_when_constant_defined()
-    {
-        do_action('admin_init');
-
-        // Simulate constant by setting filter
-        add_filter('quick_order_api_key_override', function () {
-            return 'secret-from-config';
-        });
-
-        ob_start();
-        $this->admin->renderApiKeyField();
-        $html = ob_get_clean();
-
-        $this->assertStringContainsString('disabled', $html);
-        $this->assertStringContainsString('*', $html);
-
-        remove_all_filters('quick_order_api_key_override');
-    }
-
     public function test_ajax_create_order_with_customer_data()
     {
         $nonce = wp_create_nonce('quick_order_create');
@@ -443,22 +424,49 @@ class AdminTest extends WP_Ajax_UnitTestCase
         $this->assertStringNotContainsString('disabled', $html);
     }
 
-    public function test_serial_salt_field_shows_disabled_when_constant_defined()
+    public function test_api_key_field_is_hidden_when_filter_set()
     {
-        do_action('admin_init');
+        add_filter('quick_order_api_key', function () {
+            return 'from-filter';
+        });
 
-        add_filter('quick_order_serial_salt_override', function () {
-            return 'salt-from-config';
+        ob_start();
+        $this->admin->renderApiKeyField();
+        $html = ob_get_clean();
+
+        $this->assertEmpty($html);
+
+        remove_all_filters('quick_order_api_key');
+    }
+
+    public function test_serial_salt_field_is_hidden_when_filter_set()
+    {
+        add_filter('quick_order_serial_salt', function () {
+            return 'from-filter';
         });
 
         ob_start();
         $this->admin->renderSerialSaltField();
         $html = ob_get_clean();
 
-        $this->assertStringContainsString('disabled', $html);
-        $this->assertStringContainsString('*', $html);
+        $this->assertEmpty($html);
 
-        remove_all_filters('quick_order_serial_salt_override');
+        remove_all_filters('quick_order_serial_salt');
+    }
+
+    public function test_auto_create_customer_field_is_hidden_when_filter_set()
+    {
+        add_filter('quick_order_auto_create_customer', function () {
+            return 'yes';
+        });
+
+        ob_start();
+        $this->admin->renderAutoCreateCustomerField();
+        $html = ob_get_clean();
+
+        $this->assertEmpty($html);
+
+        remove_all_filters('quick_order_auto_create_customer');
     }
 
     public function test_no_separate_settings_menu()

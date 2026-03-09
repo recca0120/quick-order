@@ -60,8 +60,12 @@ class Admin
         return $value === 'yes' ? 'yes' : 'no';
     }
 
-    public function renderAutoCreateCustomerField()
+    public function renderAutoCreateCustomerField(): void
     {
+        if (Config::isOverridden('quick_order_auto_create_customer')) {
+            return;
+        }
+
         $this->renderCheckboxField('quick_order_auto_create_customer', 'no', __('當客戶 Email 不存在時自動建立帳號', 'quick-order'));
     }
 
@@ -77,13 +81,14 @@ class Admin
         echo '<p class="description">'.esc_html__('訂單編號格式：{前綴}-{日期}-{流水號}，例如 QO-20260302-001', 'quick-order').'</p>';
     }
 
-    public function renderApiKeyField()
+    public function renderApiKeyField(): void
     {
-        $this->renderConstantOrOptionField(
-            Config::apiKeyFromConstant(),
-            'quick_order_api_key',
-            __('API Key 已透過常數 QUICK_ORDER_API_KEY 設定', 'quick-order')
-        );
+        if (Config::isOverridden('quick_order_api_key')) {
+            return;
+        }
+
+        $value = get_option('quick_order_api_key', '');
+        echo '<input type="text" name="quick_order_api_key" value="'.esc_attr($value).'" class="regular-text">';
     }
 
     public function renderPage()
@@ -183,29 +188,13 @@ class Admin
 
     public function renderSerialSaltField(): void
     {
-        $this->renderConstantOrOptionField(
-            Config::serialSaltFromConstant(),
-            'quick_order_serial_salt',
-            __('序號 Salt 已透過常數 QUICK_ORDER_SERIAL_SALT 設定', 'quick-order'),
-            __('用於產生序號的 Salt，留空則不產生序號', 'quick-order')
-        );
-    }
-
-    private function renderConstantOrOptionField($constantValue, string $optionKey, string $constantNote, string $description = ''): void
-    {
-        if ($constantValue) {
-            $masked = str_repeat('*', strlen($constantValue));
-            echo '<input type="text" value="'.esc_attr($masked).'" class="regular-text" disabled>';
-            echo '<p class="description">'.esc_html($constantNote).'</p>';
-
+        if (Config::isOverridden('quick_order_serial_salt')) {
             return;
         }
 
-        $value = get_option($optionKey, '');
-        echo '<input type="text" name="'.esc_attr($optionKey).'" value="'.esc_attr($value).'" class="regular-text">';
-        if ($description !== '') {
-            echo '<p class="description">'.esc_html($description).'</p>';
-        }
+        $value = get_option('quick_order_serial_salt', '');
+        echo '<input type="text" name="quick_order_serial_salt" value="'.esc_attr($value).'" class="regular-text">';
+        echo '<p class="description">'.esc_html__('用於產生序號的 Salt，留空則不產生序號', 'quick-order').'</p>';
     }
 
     private function renderCheckboxField(string $option, string $default, string $label): void

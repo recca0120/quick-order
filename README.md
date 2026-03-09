@@ -16,7 +16,7 @@
 - 自動產生付款連結，支援一鍵複製
 - REST API 支援外部系統整合（建單、同步、查詢、狀態更新）
 - Shortcode `[quick_order]` 可嵌入任意頁面
-- API Key 驗證（支援 `wp-config.php` 常數或後台設定）
+- API Key 驗證（支援後台設定或 `add_filter` 覆寫）
 - OrderSyncer 支援外部金流回調同步訂單（create-or-update）
 - 後台工具：補同步客戶關聯（將 guest 訂單補關聯到對應帳號）
 - 序號自動產生（SHA-256，`transaction_id + salt`），顯示於客戶 Email 與訂單詳情頁（預設關閉）
@@ -59,8 +59,8 @@
 ### REST API
 
 所有端點需透過以下任一方式驗證：
-- 已登入且具備 `manage_woocommerce` 權限
 - Header 加上 `X-API-Key: {your-api-key}`
+- Header 加上 `Authorization: Bearer {your-api-key}`
 
 #### 建立訂單
 
@@ -153,15 +153,15 @@ use Recca0120\QuickOrder\OrderSyncer;
 $syncer = new OrderSyncer();
 
 // 傳入 base64 編碼的 JSON 字串，回傳同步後的訂單（或 null）
-$order = $syncer->sync($base64EncodedJson);
+$order = $syncer->syncFromBase64($base64EncodedJson);
 
 // 直接傳入資料陣列
-$order = $syncer->syncFromData($data);
+$order = $syncer->sync($data);
 ```
 
 #### 資料格式
 
-傳入 `sync()` 的字串為 base64 編碼的 JSON，解碼後的結構：
+傳入 `sync()` 的陣列結構：
 
 | 欄位 | 類型 | 說明 |
 |------|------|------|
@@ -239,39 +239,37 @@ $order = $syncer->syncFromData($data);
 - **顯示位置**：客戶訂單確認 Email 和前台訂單詳情頁
 - **啟用開關**：可在設定頁開關（**預設關閉**）；`salt` 留空時不產生序號
 
-### Salt 設定
+## Filter 覆寫設定
 
-支援兩種模式：
+以下設定值可透過 `add_filter` 程式化覆寫。設定後後台對應欄位會自動隱藏。
 
-**1. 透過 `wp-config.php` 常數（推薦）：**
+### API Key
 
 ```php
-define('QUICK_ORDER_SERIAL_SALT', 'your-secret-salt');
+add_filter('quick_order_api_key', function () {
+    return 'your-secret-api-key';
+});
 ```
 
-設定後後台欄位會自動停用並顯示遮罩。
+### 序號 Salt
 
-**2. 透過後台設定：**
+```php
+add_filter('quick_order_serial_salt', function () {
+    return 'your-secret-salt';
+});
+```
 
-在 WooCommerce → Quick Order → 設定 → 序號設定 中輸入 Salt。
+### 自動建立帳號
+
+```php
+add_filter('quick_order_auto_create_customer', function () {
+    return 'yes'; // 或 'no'
+});
+```
+
+建議在 `functions.php` 或 mu-plugin 中設定，確保在外掛載入前生效。
 
 ---
-
-## API Key 設定
-
-支援兩種模式：
-
-**1. 透過 `wp-config.php` 常數（推薦）：**
-
-```php
-define('QUICK_ORDER_API_KEY', 'your-api-key');
-```
-
-設定後後台欄位會自動停用並顯示遮罩。
-
-**2. 透過後台設定：**
-
-在 WooCommerce → Quick Order → 設定 中輸入 API Key。
 
 ## 開發
 

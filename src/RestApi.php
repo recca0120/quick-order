@@ -125,13 +125,13 @@ class RestApi
         ]);
     }
 
-    public function checkPermission($request)
+    public function checkPermission(\WP_REST_Request $request)
     {
         if (current_user_can('manage_woocommerce')) {
             return true;
         }
 
-        $apiKey = $request->get_header('X-API-Key');
+        $apiKey = $request->get_header('X-API-Key') ?: $this->extractBearerToken($request);
         if ($apiKey) {
             $storedKey = Config::apiKey();
             if ($storedKey && hash_equals($storedKey, $apiKey)) {
@@ -142,13 +142,13 @@ class RestApi
         return new \WP_Error('rest_forbidden', '權限不足', ['status' => 403]);
     }
 
-    public function createOrder($request)
+    public function createOrder(\WP_REST_Request $request)
     {
         try {
             $params = $request->get_params();
             $params['transaction_id'] = $params['order_number'] ?? '';
 
-            $order = $this->orderSyncer->syncFromData($params);
+            $order = $this->orderSyncer->sync($params);
 
             return new \WP_REST_Response($this->formatOrder($order), 201);
         } catch (\Exception $e) {
@@ -156,11 +156,11 @@ class RestApi
         }
     }
 
-    public function syncOrder($request)
+    public function syncOrder(\WP_REST_Request $request)
     {
         try {
             $data = $request->get_json_params() ?: $request->get_params();
-            $order = $this->orderSyncer->syncFromData($data);
+            $order = $this->orderSyncer->sync($data);
 
             return new \WP_REST_Response($this->formatOrder($order));
         } catch (\Exception $e) {
@@ -168,7 +168,7 @@ class RestApi
         }
     }
 
-    public function getOrder($request)
+    public function getOrder(\WP_REST_Request $request)
     {
         try {
             $order = $this->orderSyncer->getOrder($request->get_param('id'));
@@ -179,7 +179,7 @@ class RestApi
         }
     }
 
-    public function updateStatus($request)
+    public function updateStatus(\WP_REST_Request $request)
     {
         try {
             $order = $this->orderSyncer->updateStatus(
@@ -194,14 +194,14 @@ class RestApi
         }
     }
 
-    public function linkCustomerOrders($request)
+    public function linkCustomerOrders(\WP_REST_Request $request)
     {
         $linked = $this->orderSyncer->linkOrdersByEmail($request->get_param('email'));
 
         return new \WP_REST_Response(['linked' => $linked]);
     }
 
-    public function listOrders($request)
+    public function listOrders(\WP_REST_Request $request)
     {
         $args = [
             'type' => 'shop_order',
@@ -218,6 +218,16 @@ class RestApi
         $orders = wc_get_orders($args);
 
         return new \WP_REST_Response(array_map([$this, 'formatOrder'], $orders));
+    }
+
+    private function extractBearerToken(\WP_REST_Request $request): string
+    {
+        $auth = $request->get_header('Authorization');
+        if ($auth && strpos($auth, 'Bearer ') === 0) {
+            return substr($auth, 7);
+        }
+
+        return '';
     }
 
     private function customerArgs(): array

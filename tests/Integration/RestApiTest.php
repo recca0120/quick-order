@@ -254,30 +254,30 @@ class RestApiTest extends WP_UnitTestCase
         $this->assertEquals(403, $response->get_status());
     }
 
-    public function test_api_key_from_constant_grants_access()
+    public function test_api_key_from_filter_grants_access()
     {
-        add_filter('quick_order_api_key_override', function () {
-            return 'constant-key-999';
+        add_filter('quick_order_api_key', function () {
+            return 'filter-key-999';
         });
         delete_option('quick_order_api_key');
         wp_set_current_user(0);
 
         $request = new WP_REST_Request('POST', '/quick-order/v1/orders');
-        $request->set_header('X-API-Key', 'constant-key-999');
+        $request->set_header('X-API-Key', 'filter-key-999');
         $request->set_param('amount', 100);
 
         $response = rest_do_request($request);
 
         $this->assertEquals(201, $response->get_status());
 
-        remove_all_filters('quick_order_api_key_override');
+        remove_all_filters('quick_order_api_key');
     }
 
-    public function test_constant_api_key_takes_precedence_over_option()
+    public function test_filter_api_key_takes_precedence_over_option()
     {
         update_option('quick_order_api_key', 'option-key');
-        add_filter('quick_order_api_key_override', function () {
-            return 'constant-key';
+        add_filter('quick_order_api_key', function () {
+            return 'filter-key';
         });
         wp_set_current_user(0);
 
@@ -287,9 +287,9 @@ class RestApiTest extends WP_UnitTestCase
 
         $response = rest_do_request($request);
 
-        $this->assertEquals(403, $response->get_status(), 'Option key should not work when constant is set');
+        $this->assertEquals(403, $response->get_status(), 'Option key should not work when filter overrides');
 
-        remove_all_filters('quick_order_api_key_override');
+        remove_all_filters('quick_order_api_key');
     }
 
     // ── POST /orders/sync ──
@@ -572,5 +572,70 @@ class RestApiTest extends WP_UnitTestCase
         $response = rest_do_request($request);
 
         $this->assertEquals(200, $response->get_status());
+    }
+
+    // ── Bearer Token ──
+
+    public function test_bearer_token_grants_access()
+    {
+        $apiKey = 'bearer-test-key';
+        update_option('quick_order_api_key', $apiKey);
+        wp_set_current_user(0);
+
+        $request = new WP_REST_Request('POST', '/quick-order/v1/orders');
+        $request->set_header('Authorization', 'Bearer '.$apiKey);
+        $request->set_param('amount', 100);
+
+        $response = rest_do_request($request);
+
+        $this->assertEquals(201, $response->get_status());
+    }
+
+    public function test_bearer_token_wrong_key_is_rejected()
+    {
+        update_option('quick_order_api_key', 'correct-key');
+        wp_set_current_user(0);
+
+        $request = new WP_REST_Request('POST', '/quick-order/v1/orders');
+        $request->set_header('Authorization', 'Bearer wrong-key');
+        $request->set_param('amount', 100);
+
+        $response = rest_do_request($request);
+
+        $this->assertEquals(403, $response->get_status());
+    }
+
+    public function test_bearer_token_from_filter_grants_access()
+    {
+        add_filter('quick_order_api_key', function () {
+            return 'filter-bearer-key';
+        });
+        delete_option('quick_order_api_key');
+        wp_set_current_user(0);
+
+        $request = new WP_REST_Request('POST', '/quick-order/v1/orders');
+        $request->set_header('Authorization', 'Bearer filter-bearer-key');
+        $request->set_param('amount', 100);
+
+        $response = rest_do_request($request);
+
+        $this->assertEquals(201, $response->get_status());
+
+        remove_all_filters('quick_order_api_key');
+    }
+
+    public function test_x_api_key_still_works_alongside_bearer()
+    {
+        $apiKey = 'shared-key';
+        update_option('quick_order_api_key', $apiKey);
+        wp_set_current_user(0);
+
+        $request = new WP_REST_Request('POST', '/quick-order/v1/orders');
+        $request->set_header('X-API-Key', $apiKey);
+        $request->set_param('amount', 100);
+
+        $response = rest_do_request($request);
+
+        $this->assertEquals(201, $response->get_status());
     }
 }

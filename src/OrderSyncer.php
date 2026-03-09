@@ -48,13 +48,13 @@ class OrderSyncer
         return $order;
     }
 
-    public function syncFromData(array $data): \WC_Order
+    public function sync(array $data): \WC_Order
     {
         return $this->syncOrder($data);
     }
 
     /** @return \WC_Order|null */
-    public function sync(string $headerValue)
+    public function syncFromBase64(string $headerValue)
     {
         $data = $this->parseHeader($headerValue);
 

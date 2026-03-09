@@ -4,7 +4,7 @@ namespace Recca0120\QuickOrder;
 
 class OrderService
 {
-    public function createOrder($amount, $description = '自訂訂單', $note = '', ?Customer $customer = null, $orderNumber = '', $status = 'pending')
+    public function createOrder(float $amount, string $description = '自訂訂單', string $note = '', ?Customer $customer = null, string $orderNumber = '', string $status = 'pending'): \WC_Order
     {
         $amount = floatval($amount);
         if ($amount <= 0) {
@@ -67,12 +67,12 @@ class OrderService
         return $linked;
     }
 
-    public function getOrder($orderId)
+    public function getOrder(int $orderId): \WC_Order
     {
         return $this->findOrFail($orderId);
     }
 
-    public function updateOrderStatus($orderId, $status, $note = '')
+    public function updateOrderStatus(int $orderId, string $status, string $note = ''): \WC_Order
     {
         $order = $this->findOrFail($orderId);
         $order->set_status($status, $note);
@@ -93,7 +93,7 @@ class OrderService
         if (email_exists($email)) {
             $user = get_user_by('email', $email);
             $order->set_customer_id($user->ID);
-        } elseif (get_option('quick_order_auto_create_customer', 'no') === 'yes') {
+        } elseif (Config::autoCreateCustomer() === 'yes') {
             try {
                 $userId = wc_create_new_customer(
                     $email,
@@ -143,7 +143,7 @@ class OrderService
         $order->update_meta_data('_serial_number', SerialNumber::generate($orderNumber, $salt));
     }
 
-    private function applyOrderNumber(\WC_Order $order, $orderNumber)
+    private function applyOrderNumber(\WC_Order $order, string $orderNumber): void
     {
         if ($orderNumber === '') {
             $orderNumber = $this->generateOrderNumber();
@@ -152,7 +152,7 @@ class OrderService
         $order->update_meta_data('_order_number', $orderNumber);
     }
 
-    private function generateOrderNumber()
+    private function generateOrderNumber(): string
     {
         global $wpdb;
 
@@ -176,7 +176,7 @@ class OrderService
         return $prefix.'-'.$today.'-'.str_pad($seq, 3, '0', STR_PAD_LEFT);
     }
 
-    private function cleanupStaleSequenceOptions($today)
+    private function cleanupStaleSequenceOptions(string $today): void
     {
         global $wpdb;
 
@@ -196,7 +196,7 @@ class OrderService
         }
     }
 
-    private function findOrFail($orderId)
+    private function findOrFail(int $orderId): \WC_Order
     {
         $order = wc_get_order($orderId);
         if (! $order) {

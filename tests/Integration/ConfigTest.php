@@ -9,12 +9,39 @@ class ConfigTest extends WP_UnitTestCase
 {
     protected function tearDown(): void
     {
-        remove_all_filters('quick_order_serial_salt_override');
+        remove_all_filters('quick_order_api_key');
+        remove_all_filters('quick_order_serial_salt');
+        remove_all_filters('quick_order_auto_create_customer');
+        delete_option('quick_order_api_key');
         delete_option('quick_order_serial_salt');
+        delete_option('quick_order_auto_create_customer');
         parent::tearDown();
     }
 
-    public function test_serial_salt_returns_option_when_no_constant()
+    public function test_api_key_returns_option_value()
+    {
+        update_option('quick_order_api_key', 'option-key');
+
+        $this->assertEquals('option-key', Config::apiKey());
+    }
+
+    public function test_api_key_returns_filter_value_over_option()
+    {
+        update_option('quick_order_api_key', 'from-option');
+
+        add_filter('quick_order_api_key', function () {
+            return 'from-filter';
+        });
+
+        $this->assertEquals('from-filter', Config::apiKey());
+    }
+
+    public function test_api_key_returns_empty_string_when_not_set()
+    {
+        $this->assertEquals('', Config::apiKey());
+    }
+
+    public function test_serial_salt_returns_option_value()
     {
         update_option('quick_order_serial_salt', 'my-salt');
 
@@ -25,24 +52,52 @@ class ConfigTest extends WP_UnitTestCase
     {
         update_option('quick_order_serial_salt', 'from-option');
 
-        add_filter('quick_order_serial_salt_override', function () {
+        add_filter('quick_order_serial_salt', function () {
             return 'from-filter';
         });
 
         $this->assertEquals('from-filter', Config::serialSalt());
     }
 
-    public function test_serial_salt_from_constant_returns_null_when_not_set()
+    public function test_serial_salt_returns_empty_string_when_not_set()
     {
-        $this->assertNull(Config::serialSaltFromConstant());
+        $this->assertEquals('', Config::serialSalt());
     }
 
-    public function test_serial_salt_from_constant_returns_filter_value()
+    public function test_auto_create_customer_returns_option_value()
     {
-        add_filter('quick_order_serial_salt_override', function () {
-            return 'filter-salt';
+        update_option('quick_order_auto_create_customer', 'yes');
+
+        $this->assertEquals('yes', Config::autoCreateCustomer());
+    }
+
+    public function test_auto_create_customer_returns_filter_value_over_option()
+    {
+        update_option('quick_order_auto_create_customer', 'no');
+
+        add_filter('quick_order_auto_create_customer', function () {
+            return 'yes';
         });
 
-        $this->assertEquals('filter-salt', Config::serialSaltFromConstant());
+        $this->assertEquals('yes', Config::autoCreateCustomer());
+    }
+
+    public function test_auto_create_customer_returns_no_when_not_set()
+    {
+        $this->assertEquals('no', Config::autoCreateCustomer());
+    }
+
+    public function test_is_overridden_returns_false_when_no_filter()
+    {
+        $this->assertFalse(Config::isOverridden('quick_order_api_key'));
+    }
+
+    public function test_is_overridden_returns_true_when_filter_set()
+    {
+        add_filter('quick_order_api_key', function () {
+            return 'from-filter';
+        });
+
+        $this->assertTrue(Config::isOverridden('quick_order_api_key'));
     }
 }

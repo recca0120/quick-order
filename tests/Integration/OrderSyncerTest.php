@@ -239,12 +239,12 @@ class OrderSyncerTest extends WP_UnitTestCase
         $this->assertEquals('QO-20260307-001', $second->get_meta('_order_number'));
     }
 
-    // ── syncFromData ─────────────────────────────────────────────
+    // ── sync ─────────────────────────────────────────────
 
     public function test_sync_from_data_creates_order_with_full_customer_fields()
     {
         $syncer = $this->makeSyncer();
-        $order = $syncer->syncFromData([
+        $order = $syncer->sync([
             'transaction_id' => 'QO-20260309-001',
             'amount' => 500,
             'description' => '直接同步',
@@ -273,7 +273,7 @@ class OrderSyncerTest extends WP_UnitTestCase
     public function test_does_not_create_order_when_header_is_empty()
     {
         $syncer = $this->makeSyncer();
-        $result = $syncer->sync('');
+        $result = $syncer->syncFromBase64('');
 
         $this->assertNull($result);
         $orders = wc_get_orders(['limit' => 1, 'orderby' => 'date', 'order' => 'DESC']);
@@ -294,6 +294,6 @@ class OrderSyncerTest extends WP_UnitTestCase
     {
         $syncer = $this->makeSyncer();
 
-        return $syncer->sync($this->makeHeaderValue($data));
+        return $syncer->syncFromBase64($this->makeHeaderValue($data));
     }
 }
