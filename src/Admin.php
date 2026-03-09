@@ -52,57 +52,7 @@ class Admin
         $this->registerApiSettings();
         $this->registerCustomerSettings();
         $this->registerOrderNumberSettings();
-    }
-
-    private function registerApiSettings(): void
-    {
-        register_setting('quick_order_settings', 'quick_order_api_key', [
-            'type' => 'string',
-            'sanitize_callback' => 'sanitize_text_field',
-        ]);
-
-        add_settings_section('quick_order_api_section', __('API 設定', 'quick-order'), null, 'quick-order-settings');
-        add_settings_field('quick_order_api_key', __('API Key', 'quick-order'), [$this, 'renderApiKeyField'], 'quick-order-settings', 'quick_order_api_section');
-    }
-
-    private function registerCustomerSettings(): void
-    {
-        register_setting('quick_order_settings', 'quick_order_auto_create_customer', [
-            'type' => 'string',
-            'default' => 'no',
-            'sanitize_callback' => [$this, 'sanitizeCheckbox'],
-        ]);
-
-        add_settings_section('quick_order_customer_section', __('客戶設定', 'quick-order'), null, 'quick-order-settings');
-        add_settings_field('quick_order_auto_create_customer', __('自動建立帳號', 'quick-order'), [$this, 'renderAutoCreateCustomerField'], 'quick-order-settings', 'quick_order_customer_section');
-    }
-
-    private function registerOrderNumberSettings(): void
-    {
-        register_setting('quick_order_settings', 'quick_order_custom_order_number', [
-            'type' => 'string',
-            'default' => 'yes',
-            'sanitize_callback' => [$this, 'sanitizeCheckbox'],
-        ]);
-
-        register_setting('quick_order_settings', 'quick_order_order_prefix', [
-            'type' => 'string',
-            'default' => 'QO',
-            'sanitize_callback' => 'sanitize_text_field',
-        ]);
-
-        add_settings_section('quick_order_order_number_section', __('訂單編號設定', 'quick-order'), null, 'quick-order-settings');
-        add_settings_field('quick_order_custom_order_number', __('顯示自訂編號', 'quick-order'), [$this, 'renderCustomOrderNumberField'], 'quick-order-settings', 'quick_order_order_number_section');
-        add_settings_field('quick_order_order_prefix', __('編號前綴', 'quick-order'), [$this, 'renderOrderPrefixField'], 'quick-order-settings', 'quick_order_order_number_section');
-    }
-
-    private function requireAjaxPermission(string $nonce): void
-    {
-        check_ajax_referer($nonce, 'quick_order_nonce');
-
-        if (! current_user_can('manage_woocommerce')) {
-            wp_send_json_error(['message' => __('權限不足', 'quick-order')], 403);
-        }
+        $this->registerSerialSettings();
     }
 
     public function sanitizeCheckbox($value)
@@ -234,6 +184,100 @@ class Admin
             ]);
         } catch (\Exception $e) {
             wp_send_json_error(['message' => $e->getMessage()], 400);
+        }
+    }
+
+    public function renderSerialEnabledField(): void
+    {
+        $value = get_option('quick_order_serial_enabled', 'no');
+        echo '<label><input type="checkbox" name="quick_order_serial_enabled" value="yes"'.checked($value, 'yes', false).'>';
+        esc_html_e('建立訂單時自動產生序號', 'quick-order');
+        echo '</label>';
+    }
+
+    public function renderSerialSaltField(): void
+    {
+        $constantSalt = Config::serialSaltFromConstant();
+        if ($constantSalt) {
+            $masked = str_repeat('*', strlen($constantSalt));
+            echo '<input type="text" value="'.esc_attr($masked).'" class="regular-text" disabled>';
+            echo '<p class="description">'.esc_html__('序號 Salt 已透過常數 QUICK_ORDER_SERIAL_SALT 設定', 'quick-order').'</p>';
+
+            return;
+        }
+
+        $value = get_option('quick_order_serial_salt', '');
+        echo '<input type="text" name="quick_order_serial_salt" value="'.esc_attr($value).'" class="regular-text">';
+        echo '<p class="description">'.esc_html__('用於產生序號的 Salt，留空則不產生序號', 'quick-order').'</p>';
+    }
+
+    private function registerApiSettings(): void
+    {
+        register_setting('quick_order_settings', 'quick_order_api_key', [
+            'type' => 'string',
+            'sanitize_callback' => 'sanitize_text_field',
+        ]);
+
+        add_settings_section('quick_order_api_section', __('API 設定', 'quick-order'), null, 'quick-order-settings');
+        add_settings_field('quick_order_api_key', __('API Key', 'quick-order'), [$this, 'renderApiKeyField'], 'quick-order-settings', 'quick_order_api_section');
+    }
+
+    private function registerCustomerSettings(): void
+    {
+        register_setting('quick_order_settings', 'quick_order_auto_create_customer', [
+            'type' => 'string',
+            'default' => 'no',
+            'sanitize_callback' => [$this, 'sanitizeCheckbox'],
+        ]);
+
+        add_settings_section('quick_order_customer_section', __('客戶設定', 'quick-order'), null, 'quick-order-settings');
+        add_settings_field('quick_order_auto_create_customer', __('自動建立帳號', 'quick-order'), [$this, 'renderAutoCreateCustomerField'], 'quick-order-settings', 'quick_order_customer_section');
+    }
+
+    private function registerOrderNumberSettings(): void
+    {
+        register_setting('quick_order_settings', 'quick_order_custom_order_number', [
+            'type' => 'string',
+            'default' => 'yes',
+            'sanitize_callback' => [$this, 'sanitizeCheckbox'],
+        ]);
+
+        register_setting('quick_order_settings', 'quick_order_order_prefix', [
+            'type' => 'string',
+            'default' => 'QO',
+            'sanitize_callback' => 'sanitize_text_field',
+        ]);
+
+        add_settings_section('quick_order_order_number_section', __('訂單編號設定', 'quick-order'), null, 'quick-order-settings');
+        add_settings_field('quick_order_custom_order_number', __('顯示自訂編號', 'quick-order'), [$this, 'renderCustomOrderNumberField'], 'quick-order-settings', 'quick_order_order_number_section');
+        add_settings_field('quick_order_order_prefix', __('編號前綴', 'quick-order'), [$this, 'renderOrderPrefixField'], 'quick-order-settings', 'quick_order_order_number_section');
+    }
+
+    private function registerSerialSettings(): void
+    {
+        register_setting('quick_order_settings', 'quick_order_serial_enabled', [
+            'type' => 'string',
+            'default' => 'no',
+            'sanitize_callback' => [$this, 'sanitizeCheckbox'],
+        ]);
+
+        register_setting('quick_order_settings', 'quick_order_serial_salt', [
+            'type' => 'string',
+            'default' => '',
+            'sanitize_callback' => 'sanitize_text_field',
+        ]);
+
+        add_settings_section('quick_order_serial_section', __('序號設定', 'quick-order'), null, 'quick-order-settings');
+        add_settings_field('quick_order_serial_enabled', __('啟用序號', 'quick-order'), [$this, 'renderSerialEnabledField'], 'quick-order-settings', 'quick_order_serial_section');
+        add_settings_field('quick_order_serial_salt', __('序號 Salt', 'quick-order'), [$this, 'renderSerialSaltField'], 'quick-order-settings', 'quick_order_serial_section');
+    }
+
+    private function requireAjaxPermission(string $nonce): void
+    {
+        check_ajax_referer($nonce, 'quick_order_nonce');
+
+        if (! current_user_can('manage_woocommerce')) {
+            wp_send_json_error(['message' => __('權限不足', 'quick-order')], 403);
         }
     }
 }

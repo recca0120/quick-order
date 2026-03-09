@@ -23,6 +23,7 @@ class OrderService
             $this->applyCustomer($order, $customer);
         }
         $this->applyOrderNumber($order, $orderNumber);
+        $this->applySerialNumber($order);
 
         $order->calculate_totals();
         $order->set_status($status);
@@ -124,6 +125,22 @@ class OrderService
                 $order->{'set_billing_'.$field}($value);
             }
         }
+    }
+
+    private function applySerialNumber(\WC_Order $order): void
+    {
+        if (get_option('quick_order_serial_enabled', 'no') !== 'yes') {
+            return;
+        }
+
+        $salt = Config::serialSalt();
+        $orderNumber = $order->get_meta('_order_number');
+
+        if ($orderNumber === '' || $salt === '') {
+            return;
+        }
+
+        $order->update_meta_data('_serial_number', SerialNumber::generate($orderNumber, $salt));
     }
 
     private function applyOrderNumber(\WC_Order $order, $orderNumber)

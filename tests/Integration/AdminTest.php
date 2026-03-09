@@ -408,6 +408,59 @@ class AdminTest extends WP_Ajax_UnitTestCase
         $this->assertFalse($response['success']);
     }
 
+    // ── Serial Number Settings ──
+
+    public function test_serial_settings_are_registered()
+    {
+        do_action('admin_init');
+
+        $settings = get_registered_settings();
+        $this->assertArrayHasKey('quick_order_serial_enabled', $settings);
+        $this->assertArrayHasKey('quick_order_serial_salt', $settings);
+    }
+
+    public function test_render_page_contains_serial_settings()
+    {
+        do_action('admin_init');
+
+        ob_start();
+        $this->admin->renderPage();
+        $html = ob_get_clean();
+
+        $this->assertStringContainsString('quick_order_serial_enabled', $html);
+        $this->assertStringContainsString('quick_order_serial_salt', $html);
+    }
+
+    public function test_serial_salt_field_shows_editable_when_no_constant()
+    {
+        do_action('admin_init');
+
+        ob_start();
+        $this->admin->renderSerialSaltField();
+        $html = ob_get_clean();
+
+        $this->assertStringContainsString('<input type="text"', $html);
+        $this->assertStringNotContainsString('disabled', $html);
+    }
+
+    public function test_serial_salt_field_shows_disabled_when_constant_defined()
+    {
+        do_action('admin_init');
+
+        add_filter('quick_order_serial_salt_override', function () {
+            return 'salt-from-config';
+        });
+
+        ob_start();
+        $this->admin->renderSerialSaltField();
+        $html = ob_get_clean();
+
+        $this->assertStringContainsString('disabled', $html);
+        $this->assertStringContainsString('*', $html);
+
+        remove_all_filters('quick_order_serial_salt_override');
+    }
+
     public function test_no_separate_settings_menu()
     {
         do_action('admin_menu');

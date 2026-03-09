@@ -19,6 +19,7 @@
 - API Key 驗證（支援 `wp-config.php` 常數或後台設定）
 - OrderSyncer 支援外部金流回調同步訂單（create-or-update）
 - 後台工具：補同步客戶關聯（將 guest 訂單補關聯到對應帳號）
+- 序號自動產生（SHA-256，`transaction_id + salt`），顯示於客戶 Email 與訂單詳情頁（預設關閉）
 
 ## 系統需求
 
@@ -43,7 +44,7 @@
 
 - **建立訂單** — 輸入訂單編號（選填）、客戶資料（Email、姓名、電話、地址）、金額、商品名稱、備註，送出後取得付款連結
 - **工具** — 補同步客戶關聯：輸入客戶 Email，將該 Email 的 guest 訂單補關聯到對應帳號
-- **設定** — 設定 API Key、自動建立帳號開關、自訂訂單編號顯示與前綴
+- **設定** — 設定 API Key、自動建立帳號開關、自訂訂單編號顯示與前綴、序號啟用與 Salt
 
 ### Shortcode
 
@@ -229,6 +230,32 @@ $order = $syncer->syncFromData($data);
 - **無 Email** → guest order，行為不變
 
 > **建議**：保持預設的關閉狀態。客戶自行在前台註冊後，可在後台「工具」頁使用「補同步關聯」功能，或透過 `POST /customers/link-orders` API，將過去的 guest 訂單補關聯到對應帳號。
+
+## 序號
+
+每筆訂單建立時可自動產生一組序號，存於 `_serial_number` order meta。
+
+- **產生方式**：`SHA-256(transaction_id + salt)`，轉大寫十六進制（64 字元）
+- **顯示位置**：客戶訂單確認 Email 和前台訂單詳情頁
+- **啟用開關**：可在設定頁開關（**預設關閉**）；`salt` 留空時不產生序號
+
+### Salt 設定
+
+支援兩種模式：
+
+**1. 透過 `wp-config.php` 常數（推薦）：**
+
+```php
+define('QUICK_ORDER_SERIAL_SALT', 'your-secret-salt');
+```
+
+設定後後台欄位會自動停用並顯示遮罩。
+
+**2. 透過後台設定：**
+
+在 WooCommerce → Quick Order → 設定 → 序號設定 中輸入 Salt。
+
+---
 
 ## API Key 設定
 

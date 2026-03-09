@@ -42,4 +42,7 @@ add_action('plugins_loaded', function () {
 
     $restApi = new Recca0120\QuickOrder\RestApi(new Recca0120\QuickOrder\OrderSyncer($orderService));
     $restApi->register();
+
+    $serialNumber = new Recca0120\QuickOrder\SerialNumber();
+    $serialNumber->register();
 });
