@@ -43,7 +43,7 @@ class Customer
         }
 
         $parts = explode(' ', $name, 2);
-        $firstName = $parts[0] ?? '';
+        $firstName = $parts[0];
         $lastName = $parts[1] ?? '';
 
         if ($lastName === '' && mb_strlen($firstName) > 1 && preg_match('/\p{Han}/u', $firstName)) {
@@ -58,10 +58,7 @@ class Customer
     {
         $customer = new self();
         foreach (self::FIELDS as $field) {
-            $value = $extractor($field);
-            if ($value !== '') {
-                $customer->$field = $value;
-            }
+            $customer->$field = $extractor($field);
         }
 
         return $customer;

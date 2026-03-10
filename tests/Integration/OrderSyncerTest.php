@@ -112,6 +112,11 @@ class OrderSyncerTest extends WP_UnitTestCase
         $this->assertEquals('omnipay_newebpay_atm', $syncer->resolveGatewayId('newebpay', 'atm'));
         $this->assertEquals('omnipay_yipay_cvs', $syncer->resolveGatewayId('yipay', 'cvs'));
         $this->assertEquals('omnipay_banktransfer', $syncer->resolveGatewayId('bank-transfer', 'atm'));
+        $this->assertEquals('omnipay_yipay_credit', $syncer->resolveGatewayId('yipay', 'credit_card'));
+        $this->assertEquals('omnipay_newebpay_credit', $syncer->resolveGatewayId('newebpay', 'credit_card'));
+        $this->assertEquals('omnipay_newebpay_webatm', $syncer->resolveGatewayId('newebpay', 'web_atm'));
+        $this->assertEquals('omnipay_yipay_atm', $syncer->resolveGatewayId('yipay', 'atm'));
+        $this->assertEquals('omnipay_yipay_cvs', $syncer->resolveGatewayId('yipay', 'cvs'));
     }
 
     public function test_sets_payment_method_and_title_on_order()

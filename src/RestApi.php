@@ -132,11 +132,9 @@ class RestApi
         }
 
         $apiKey = $request->get_header('X-API-Key') ?: $this->extractBearerToken($request);
-        if ($apiKey) {
-            $storedKey = Config::apiKey();
-            if ($storedKey && hash_equals($storedKey, $apiKey)) {
-                return true;
-            }
+        $storedKey = Config::apiKey();
+        if ($apiKey && $storedKey && hash_equals($storedKey, $apiKey)) {
+            return true;
         }
 
         return new \WP_Error('rest_forbidden', '權限不足', ['status' => 403]);

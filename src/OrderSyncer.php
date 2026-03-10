@@ -8,11 +8,19 @@ class OrderSyncer
         'new' => 'pending',
     ];
 
-    // Fields consumed by syncOrder + buildOrder — excluded from _payment_* meta
+    private const PAYMENT_METHOD_MAP = [
+        'credit_card' => 'credit',
+        'web_atm'     => 'webatm',
+    ];
+
+    // Fields handled explicitly — excluded from _payment_* meta
     private const SYNC_FIELDS = [
         'transaction_id', 'status', 'amount', 'description', 'note',
         'name', 'email', 'phone_number', 'address_1', 'city', 'postcode',
         'order_number', 'created_via',
+        'transaction_reference', 'customer_ip',
+        'gateway_name', 'payment_method',
+        'created_at', 'completed_at',
     ];
 
     /** @var OrderService */
@@ -102,7 +110,9 @@ class OrderSyncer
             return 'omnipay_banktransfer';
         }
 
-        return 'omnipay_'.$gatewayName.'_'.$paymentMethod;
+        $method = self::PAYMENT_METHOD_MAP[$paymentMethod] ?? $paymentMethod;
+
+        return 'omnipay_'.$gatewayName.($method !== '' ? '_'.$method : '');
     }
 
     /** @return \WC_Order|null */
@@ -137,21 +147,19 @@ class OrderSyncer
 
     private function applyOrderFields(\WC_Order $order, array $data): void
     {
-        $remaining = array_diff_key($data, array_flip(self::SYNC_FIELDS));
-
-        if (($reference = $remaining['transaction_reference'] ?? '') !== '') {
+        if (($reference = $data['transaction_reference'] ?? '') !== '') {
             $order->set_transaction_id($reference);
         }
-        unset($remaining['transaction_reference']);
 
-        if (($ip = $remaining['customer_ip'] ?? '') !== '') {
+        if (($ip = $data['customer_ip'] ?? '') !== '') {
             $order->set_customer_ip_address($ip);
         }
-        unset($remaining['customer_ip']);
 
-        $remaining = $this->applyDates($order, $remaining);
-        $this->applyRemittanceLast5($order, $remaining);
-        $remaining = $this->applyPaymentMethod($order, $remaining);
+        $this->applyDates($order, $data);
+        $this->applyRemittanceLast5($order, $data);
+        $this->applyPaymentMethod($order, $data);
+
+        $remaining = array_diff_key($data, array_flip(self::SYNC_FIELDS));
         $this->applyExtraFields($order, $remaining);
     }
 
@@ -169,7 +177,7 @@ class OrderSyncer
         $order->update_meta_data('_omnipay_remittance_last5', substr($accountNumber, -5));
     }
 
-    private function applyDates(\WC_Order $order, array $data): array
+    private function applyDates(\WC_Order $order, array $data): void
     {
         if (($createdAt = $data['created_at'] ?? '') !== '') {
             $order->set_date_created($createdAt);
@@ -178,13 +186,9 @@ class OrderSyncer
         if (($completedAt = $data['completed_at'] ?? '') !== '') {
             $order->set_date_paid($completedAt);
         }
-
-        unset($data['created_at'], $data['completed_at']);
-
-        return $data;
     }
 
-    private function applyPaymentMethod(\WC_Order $order, array $data): array
+    private function applyPaymentMethod(\WC_Order $order, array $data): void
     {
         $gatewayName = $data['gateway_name'] ?? '';
         $paymentMethod = $data['payment_method'] ?? '';
@@ -193,10 +197,6 @@ class OrderSyncer
             $order->set_payment_method($this->resolveGatewayId($gatewayName, $paymentMethod));
             $order->set_payment_method_title($gatewayName);
         }
-
-        unset($data['gateway_name'], $data['payment_method']);
-
-        return $data;
     }
 
     private function applyExtraFields(\WC_Order $order, array $data): void
