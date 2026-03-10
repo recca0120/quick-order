@@ -85,6 +85,7 @@ POST /wp-json/quick-order/v1/orders
 | `payment_method` | string | | 付款方式（如 `atm`、`cvs`） |
 | `created_at` | string | | 訂單建立時間（ISO 8601） |
 | `completed_at` | string | | 付款完成時間（ISO 8601） |
+| `customer_ip` | string | | 客戶 IP 位址（未填則不記錄） |
 
 #### 同步訂單（create-or-update）
 
@@ -181,6 +182,7 @@ $order = $syncer->sync($data);
 | `address_1` | string | 地址 |
 | `city` | string | 城市 |
 | `postcode` | string | 郵遞區號 |
+| `customer_ip` | string | 客戶 IP 位址（未填則不記錄） |
 | 其他欄位 | any | 自動存為 `_payment_{欄位名}` meta |
 
 範例 JSON：

@@ -12,7 +12,7 @@ class OrderSyncer
         'transaction_reference', 'transaction_id', 'gateway_name',
         'payment_method', 'amount', 'description', 'note', 'status',
         'created_at', 'completed_at', 'name', 'email', 'phone_number',
-        'address_1', 'city', 'postcode', 'order_number',
+        'address_1', 'city', 'postcode', 'order_number', 'customer_ip',
     ];
 
     /** @var OrderService */
@@ -145,6 +145,11 @@ class OrderSyncer
         $reference = $data['transaction_reference'] ?? '';
         if ($reference !== '') {
             $order->set_transaction_id($reference);
+        }
+
+        $ip = $data['customer_ip'] ?? '';
+        if ($ip !== '') {
+            $order->set_customer_ip_address($ip);
         }
 
         $this->applyDates($order, $data);

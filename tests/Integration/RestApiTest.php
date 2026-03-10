@@ -638,4 +638,49 @@ class RestApiTest extends WP_UnitTestCase
 
         $this->assertEquals(201, $response->get_status());
     }
+
+    // ── Customer IP ──
+
+    public function test_create_order_stores_specified_customer_ip()
+    {
+        wp_set_current_user(self::factory()->user->create(['role' => 'administrator']));
+
+        $request = new WP_REST_Request('POST', '/quick-order/v1/orders');
+        $request->set_param('amount', 100);
+        $request->set_param('customer_ip', '1.2.3.4');
+
+        $response = rest_do_request($request);
+        $data     = $response->get_data();
+        $order    = wc_get_order($data['order_id']);
+
+        $this->assertEquals('1.2.3.4', $order->get_customer_ip_address());
+    }
+
+    public function test_sync_order_stores_specified_customer_ip()
+    {
+        wp_set_current_user(self::factory()->user->create(['role' => 'administrator']));
+
+        $request = new WP_REST_Request('POST', '/quick-order/v1/orders/sync');
+        $request->set_param('amount', 100);
+        $request->set_param('transaction_id', 'IP-TEST-001');
+        $request->set_param('customer_ip', '9.8.7.6');
+
+        $response = rest_do_request($request);
+        $data     = $response->get_data();
+        $order    = wc_get_order($data['order_id']);
+
+        $this->assertEquals('9.8.7.6', $order->get_customer_ip_address());
+    }
+
+    public function test_create_order_without_customer_ip_still_works()
+    {
+        wp_set_current_user(self::factory()->user->create(['role' => 'administrator']));
+
+        $request = new WP_REST_Request('POST', '/quick-order/v1/orders');
+        $request->set_param('amount', 100);
+
+        $response = rest_do_request($request);
+
+        $this->assertEquals(201, $response->get_status());
+    }
 }
