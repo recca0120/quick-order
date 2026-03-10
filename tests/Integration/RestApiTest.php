@@ -684,4 +684,21 @@ class RestApiTest extends WP_UnitTestCase
 
         $this->assertEquals(201, $response->get_status());
     }
+
+    // ── Customer User Agent ──
+
+    public function test_create_order_stores_customer_user_agent()
+    {
+        wp_set_current_user(self::factory()->user->create(['role' => 'administrator']));
+
+        $request = new WP_REST_Request('POST', '/quick-order/v1/orders');
+        $request->set_param('amount', 100);
+        $request->set_param('customer_user_agent', 'Mozilla/5.0 (Test)');
+
+        $response = rest_do_request($request);
+        $data     = $response->get_data();
+        $order    = wc_get_order($data['order_id']);
+
+        $this->assertEquals('Mozilla/5.0 (Test)', $order->get_customer_user_agent());
+    }
 }

@@ -236,7 +236,7 @@ class RestApi
 
     private function paymentArgs(): array
     {
-        return $this->stringArgs(['transaction_reference', 'gateway_name', 'payment_method', 'created_at', 'completed_at', 'customer_ip', 'created_via']);
+        return $this->stringArgs(['transaction_reference', 'gateway_name', 'payment_method', 'created_at', 'completed_at', 'customer_ip', 'customer_user_agent', 'created_via']);
     }
 
     private function stringArgs(array $fields): array

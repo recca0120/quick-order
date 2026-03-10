@@ -18,7 +18,7 @@ class OrderSyncer
         'transaction_id', 'status', 'amount', 'description', 'note',
         'name', 'email', 'phone_number', 'address_1', 'city', 'postcode',
         'order_number', 'created_via',
-        'transaction_reference', 'customer_ip',
+        'transaction_reference', 'customer_ip', 'customer_user_agent',
         'gateway_name', 'payment_method',
         'created_at', 'completed_at',
     ];
@@ -145,14 +145,18 @@ class OrderSyncer
         return $this->orderService->createOrder($data['amount'] ?? 0, $options);
     }
 
+    private const SCALAR_FIELD_MAP = [
+        'transaction_reference' => 'set_transaction_id',
+        'customer_ip'           => 'set_customer_ip_address',
+        'customer_user_agent'   => 'set_customer_user_agent',
+    ];
+
     private function applyOrderFields(\WC_Order $order, array $data): void
     {
-        if (($reference = $data['transaction_reference'] ?? '') !== '') {
-            $order->set_transaction_id($reference);
-        }
-
-        if (($ip = $data['customer_ip'] ?? '') !== '') {
-            $order->set_customer_ip_address($ip);
+        foreach (self::SCALAR_FIELD_MAP as $key => $method) {
+            if (($value = $data[$key] ?? '') !== '') {
+                $order->$method($value);
+            }
         }
 
         $this->applyDates($order, $data);

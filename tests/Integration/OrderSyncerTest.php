@@ -337,6 +337,26 @@ class OrderSyncerTest extends WP_UnitTestCase
         $this->assertEquals('rest-api', $order->get_created_via());
     }
 
+    // ── Customer User Agent ─────────────────────────────────────
+
+    public function test_stores_customer_user_agent()
+    {
+        $data = array_merge($this->paymentData, [
+            'transaction_id' => 'QO-20260307-UA-001',
+            'customer_user_agent' => 'Mozilla/5.0 (Test)',
+        ]);
+        $order = $this->runWithResponseHeader($data);
+
+        $this->assertEquals('Mozilla/5.0 (Test)', $order->get_customer_user_agent());
+    }
+
+    public function test_does_not_set_user_agent_when_empty()
+    {
+        $order = $this->runWithResponseHeader($this->paymentData);
+
+        $this->assertEmpty($order->get_customer_user_agent());
+    }
+
     // ── 空值不建立訂單 ──────────────────────────────────────────
 
     public function test_does_not_create_order_when_header_is_empty()

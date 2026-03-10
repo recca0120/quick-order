@@ -21,7 +21,7 @@
 - 後台工具：補同步客戶關聯（將 guest 訂單補關聯到對應帳號）
 - 序號自動產生（SHA-256，`transaction_id + salt`），設定 salt 即啟用，顯示於 Email、前台及後台訂單詳情頁
 - ATM 付款時自動擷取匯款帳號後五碼（`account_number` 欄位）
-- 客戶 IP 記錄支援（`customer_ip` 欄位）
+- 客戶 IP 與 User Agent 記錄支援（`customer_ip`、`customer_user_agent` 欄位）
 - 訂單來源（`created_via`）預設為 `checkout`，可透過 filter 或 API 參數覆寫
 - 訂單歸因（Order Attribution）預設為「直接」，可透過 filter 自訂
 - Filter 覆寫設定時自動隱藏後台對應欄位與 section
@@ -91,6 +91,7 @@ POST /wp-json/quick-order/v1/orders
 | `created_at` | string | | 訂單建立時間（ISO 8601） |
 | `completed_at` | string | | 付款完成時間（ISO 8601） |
 | `customer_ip` | string | | 客戶 IP 位址（未填則不記錄） |
+| `customer_user_agent` | string | | 客戶 User Agent（未填則不記錄） |
 | `created_via` | string | | 訂單來源（未填則套用 filter，預設 `checkout`） |
 
 #### 同步訂單（create-or-update）
@@ -189,6 +190,7 @@ $order = $syncer->sync($data);
 | `city` | string | 城市 |
 | `postcode` | string | 郵遞區號 |
 | `customer_ip` | string | 客戶 IP 位址（未填則不記錄） |
+| `customer_user_agent` | string | 客戶 User Agent（未填則不記錄） |
 | `created_via` | string | 訂單來源（未填則套用 filter，預設 `checkout`） |
 | 其他欄位 | any | 自動存為 `_payment_{欄位名}` meta |
 
