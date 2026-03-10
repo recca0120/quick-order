@@ -60,14 +60,14 @@ class Admin
         return $value === 'yes' ? 'yes' : 'no';
     }
 
-    public function renderAutoCreateCustomerField(): void
+    public static function renderAutoCreateCustomerField(): void
     {
-        $this->renderCheckboxField('quick_order_auto_create_customer', 'no', __('當客戶 Email 不存在時自動建立帳號', 'quick-order'));
+        self::renderCheckboxField('quick_order_auto_create_customer', 'no', __('當客戶 Email 不存在時自動建立帳號', 'quick-order'));
     }
 
-    public function renderCustomOrderNumberField()
+    public static function renderCustomOrderNumberField(): void
     {
-        $this->renderCheckboxField('quick_order_custom_order_number', 'yes', __('在 WooCommerce 中顯示自訂訂單編號', 'quick-order'));
+        self::renderCheckboxField('quick_order_custom_order_number', 'yes', __('在 WooCommerce 中顯示自訂訂單編號', 'quick-order'));
     }
 
     public static function renderOrderPrefixField()
@@ -77,7 +77,7 @@ class Admin
         echo '<p class="description">'.esc_html__('訂單編號格式：{前綴}-{日期}-{流水號}，例如 QO-20260302-001', 'quick-order').'</p>';
     }
 
-    public function renderApiKeyField(): void
+    public static function renderApiKeyField(): void
     {
         $value = get_option('quick_order_api_key', '');
         echo '<input type="text" name="quick_order_api_key" value="'.esc_attr($value).'" class="regular-text">';
@@ -154,12 +154,15 @@ class Admin
         $this->requireAjaxPermission('quick_order_create');
 
         try {
-            $order = $this->orderService->createOrder(
-                floatval(sanitize_text_field(wp_unslash($_POST['amount'] ?? 0))),
+            $options = new OrderOptions(
                 sanitize_text_field(wp_unslash($_POST['description'] ?? '')),
                 sanitize_textarea_field(wp_unslash($_POST['note'] ?? '')),
                 Customer::fromPost($_POST),
                 sanitize_text_field(wp_unslash($_POST['order_number'] ?? ''))
+            );
+            $order = $this->orderService->createOrder(
+                floatval(sanitize_text_field(wp_unslash($_POST['amount'] ?? 0))),
+                $options
             );
 
             wp_send_json_success([
@@ -173,19 +176,14 @@ class Admin
         }
     }
 
-    public function renderSerialEnabledField(): void
-    {
-        $this->renderCheckboxField('quick_order_serial_enabled', 'no', __('建立訂單時自動產生序號', 'quick-order'));
-    }
-
-    public function renderSerialSaltField(): void
+    public static function renderSerialSaltField(): void
     {
         $value = get_option('quick_order_serial_salt', '');
         echo '<input type="text" name="quick_order_serial_salt" value="'.esc_attr($value).'" class="regular-text">';
         echo '<p class="description">'.esc_html__('用於產生序號的 Salt，留空則不產生序號', 'quick-order').'</p>';
     }
 
-    private function renderCheckboxField(string $option, string $default, string $label): void
+    private static function renderCheckboxField(string $option, string $default, string $label): void
     {
         $value = get_option($option, $default);
         echo '<label><input type="checkbox" name="'.esc_attr($option).'" value="yes"'.checked($value, 'yes', false).'>'.esc_html($label).'</label>';
@@ -198,8 +196,8 @@ class Admin
             'sanitize_callback' => 'sanitize_text_field',
         ]);
 
-        add_settings_section('quick_order_api_section', __('API 設定', 'quick-order'), null, 'quick-order-settings');
         if (! Config::isOverridden('quick_order_api_key')) {
+            add_settings_section('quick_order_api_section', __('API 設定', 'quick-order'), null, 'quick-order-settings');
             add_settings_field('quick_order_api_key', __('API Key', 'quick-order'), [$this, 'renderApiKeyField'], 'quick-order-settings', 'quick_order_api_section');
         }
     }
@@ -212,8 +210,8 @@ class Admin
             'sanitize_callback' => [$this, 'sanitizeCheckbox'],
         ]);
 
-        add_settings_section('quick_order_customer_section', __('客戶設定', 'quick-order'), null, 'quick-order-settings');
         if (! Config::isOverridden('quick_order_auto_create_customer')) {
+            add_settings_section('quick_order_customer_section', __('客戶設定', 'quick-order'), null, 'quick-order-settings');
             add_settings_field('quick_order_auto_create_customer', __('自動建立帳號', 'quick-order'), [$this, 'renderAutoCreateCustomerField'], 'quick-order-settings', 'quick_order_customer_section');
         }
     }
@@ -239,21 +237,14 @@ class Admin
 
     private function registerSerialSettings(): void
     {
-        register_setting('quick_order_settings', 'quick_order_serial_enabled', [
-            'type' => 'string',
-            'default' => 'no',
-            'sanitize_callback' => [$this, 'sanitizeCheckbox'],
-        ]);
-
         register_setting('quick_order_settings', 'quick_order_serial_salt', [
             'type' => 'string',
             'default' => '',
             'sanitize_callback' => 'sanitize_text_field',
         ]);
 
-        add_settings_section('quick_order_serial_section', __('序號設定', 'quick-order'), null, 'quick-order-settings');
-        add_settings_field('quick_order_serial_enabled', __('啟用序號', 'quick-order'), [$this, 'renderSerialEnabledField'], 'quick-order-settings', 'quick_order_serial_section');
         if (! Config::isOverridden('quick_order_serial_salt')) {
+            add_settings_section('quick_order_serial_section', __('序號設定', 'quick-order'), null, 'quick-order-settings');
             add_settings_field('quick_order_serial_salt', __('序號 Salt', 'quick-order'), [$this, 'renderSerialSaltField'], 'quick-order-settings', 'quick_order_serial_section');
         }
     }

@@ -19,7 +19,12 @@
 - API Key 驗證（支援後台設定或 `add_filter` 覆寫）
 - OrderSyncer 支援外部金流回調同步訂單（create-or-update）
 - 後台工具：補同步客戶關聯（將 guest 訂單補關聯到對應帳號）
-- 序號自動產生（SHA-256，`transaction_id + salt`），顯示於客戶 Email 與訂單詳情頁（預設關閉）
+- 序號自動產生（SHA-256，`transaction_id + salt`），設定 salt 即啟用，顯示於 Email、前台及後台訂單詳情頁
+- ATM 付款時自動擷取匯款帳號後五碼（`account_number` 欄位）
+- 客戶 IP 記錄支援（`customer_ip` 欄位）
+- 訂單來源（`created_via`）預設為 `checkout`，可透過 filter 或 API 參數覆寫
+- 訂單歸因（Order Attribution）預設為「直接」，可透過 filter 自訂
+- Filter 覆寫設定時自動隱藏後台對應欄位與 section
 
 ## 系統需求
 
@@ -44,7 +49,7 @@
 
 - **建立訂單** — 輸入訂單編號（選填）、客戶資料（Email、姓名、電話、地址）、金額、商品名稱、備註，送出後取得付款連結
 - **工具** — 補同步客戶關聯：輸入客戶 Email，將該 Email 的 guest 訂單補關聯到對應帳號
-- **設定** — 設定 API Key、自動建立帳號開關、自訂訂單編號顯示與前綴、序號啟用與 Salt
+- **設定** — 設定 API Key、自動建立帳號開關、自訂訂單編號顯示與前綴、序號 Salt（填入即啟用序號功能）
 
 ### Shortcode
 
@@ -86,6 +91,7 @@ POST /wp-json/quick-order/v1/orders
 | `created_at` | string | | 訂單建立時間（ISO 8601） |
 | `completed_at` | string | | 付款完成時間（ISO 8601） |
 | `customer_ip` | string | | 客戶 IP 位址（未填則不記錄） |
+| `created_via` | string | | 訂單來源（未填則套用 filter，預設 `checkout`） |
 
 #### 同步訂單（create-or-update）
 
@@ -183,6 +189,7 @@ $order = $syncer->sync($data);
 | `city` | string | 城市 |
 | `postcode` | string | 郵遞區號 |
 | `customer_ip` | string | 客戶 IP 位址（未填則不記錄） |
+| `created_via` | string | 訂單來源（未填則套用 filter，預設 `checkout`） |
 | 其他欄位 | any | 自動存為 `_payment_{欄位名}` meta |
 
 範例 JSON：
@@ -238,8 +245,22 @@ $order = $syncer->sync($data);
 每筆訂單建立時可自動產生一組序號，存於 `_serial_number` order meta。
 
 - **產生方式**：`SHA-256(transaction_id + salt)`，轉大寫十六進制（64 字元）
-- **顯示位置**：客戶訂單確認 Email 和前台訂單詳情頁
-- **啟用開關**：可在設定頁開關（**預設關閉**）；`salt` 留空時不產生序號
+- **啟用條件**：在設定頁填入「序號 Salt」即自動啟用；留空則不產生
+- **顯示位置**：
+  - 客戶訂單確認 Email（訂單狀態為 `completed` 時）
+  - 前台訂單詳情頁（訂單狀態為 `completed` 時）
+  - 後台訂單詳情頁帳單區塊（任何狀態皆顯示）
+- **顯示控制**：透過 `quick_order_serial_display` filter 控制（預設顯示）
+
+```php
+// 完全停用顯示
+add_filter('quick_order_serial_display', '__return_false');
+
+// 依條件控制（例如只有滿千元才顯示）
+add_filter('quick_order_serial_display', function (bool $display, \WC_Order $order) {
+    return (float) $order->get_total() >= 1000;
+}, 10, 2);
+```
 
 ## Filter 覆寫設定
 
@@ -267,6 +288,36 @@ add_filter('quick_order_serial_salt', function () {
 add_filter('quick_order_auto_create_customer', function () {
     return 'yes'; // 或 'no'
 });
+```
+
+### 訂單來源（created_via）
+
+```php
+add_filter('quick_order_created_via', function () {
+    return 'my-system';
+});
+```
+
+### 訂單歸因（Order Attribution）
+
+```php
+add_filter('quick_order_order_attribution', function () {
+    return [
+        'source_type' => 'utm',
+        'utm_source'  => 'google',
+        'origin'      => 'google.com',
+    ];
+});
+
+// 停用歸因
+add_filter('quick_order_order_attribution', fn () => []);
+```
+
+### 序號顯示
+
+```php
+// 停用所有序號顯示
+add_filter('quick_order_serial_display', '__return_false');
 ```
 
 建議在 `functions.php` 或 mu-plugin 中設定，確保在外掛載入前生效。

@@ -4,15 +4,16 @@ namespace Recca0120\QuickOrder;
 
 class OrderService
 {
-    public function createOrder(float $amount, string $description = '自訂訂單', string $note = '', ?Customer $customer = null, string $orderNumber = '', string $status = 'pending', string $createdVia = 'checkout'): \WC_Order
+    public function createOrder(float $amount, ?OrderOptions $options = null): \WC_Order
     {
-        $amount = floatval($amount);
+        $options ??= new OrderOptions();
+
         if ($amount <= 0) {
             throw new \InvalidArgumentException('金額必須大於 0');
         }
 
         $order = wc_create_order();
-        $order->set_created_via((string) apply_filters('quick_order_created_via', $createdVia));
+        $order->set_created_via((string) apply_filters('quick_order_created_via', $options->createdVia));
 
         $attribution = (array) apply_filters('quick_order_order_attribution', [
             'source_type' => 'typein',
@@ -24,22 +25,20 @@ class OrderService
         }
 
         $fee = new \WC_Order_Item_Fee();
-        $fee->set_name($description);
+        $fee->set_name($options->description);
         $fee->set_amount($amount);
         $fee->set_total($amount);
         $order->add_item($fee);
 
-        if ($customer !== null) {
-            $this->applyCustomer($order, $customer);
-        }
-        $this->applyOrderNumber($order, $orderNumber);
+        $this->applyCustomer($order, $options->customer);
+        $this->applyOrderNumber($order, $options->orderNumber);
         $this->applySerialNumber($order);
 
         $order->calculate_totals();
-        $order->set_status($status);
+        $order->set_status($options->status);
 
-        if ($note) {
-            $order->add_order_note($note);
+        if ($options->note) {
+            $order->add_order_note($options->note);
         }
 
         $order->save();
@@ -91,17 +90,21 @@ class OrderService
         return $order;
     }
 
-    private function applyCustomer(\WC_Order $order, Customer $customer)
+    private function applyCustomer(\WC_Order $order, ?Customer $customer)
     {
+        if ($customer === null) {
+            return;
+        }
+
         $email = sanitize_email($customer->email);
         if (! $email) {
             return;
         }
 
         $nameParts = $customer->splitName();
+        $user = get_user_by('email', $email);
 
-        if (email_exists($email)) {
-            $user = get_user_by('email', $email);
+        if ($user) {
             $order->set_customer_id($user->ID);
         } elseif (Config::autoCreateCustomer() === 'yes') {
             try {
@@ -139,10 +142,6 @@ class OrderService
 
     private function applySerialNumber(\WC_Order $order): void
     {
-        if (get_option('quick_order_serial_enabled', 'no') !== 'yes') {
-            return;
-        }
-
         $salt = Config::serialSalt();
         $orderNumber = $order->get_meta('_order_number');
 

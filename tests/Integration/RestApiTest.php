@@ -2,6 +2,7 @@
 
 namespace Recca0120\QuickOrder\Tests\Integration;
 
+use Recca0120\QuickOrder\OrderOptions;
 use Recca0120\QuickOrder\OrderService;
 use Recca0120\QuickOrder\RestApi;
 use WP_REST_Request;
@@ -328,7 +329,7 @@ class RestApiTest extends WP_UnitTestCase
     {
         wp_set_current_user(self::factory()->user->create(['role' => 'administrator']));
 
-        $order = $this->orderService->createOrder(1000, '商品', '', null, 'QO-20260309-100');
+        $order = $this->orderService->createOrder(1000, new OrderOptions('商品', '', null, 'QO-20260309-100'));
 
         $request = new WP_REST_Request('POST', '/quick-order/v1/orders/sync');
         $request->set_header('Content-Type', 'application/json');
@@ -355,7 +356,7 @@ class RestApiTest extends WP_UnitTestCase
     {
         wp_set_current_user(self::factory()->user->create(['role' => 'administrator']));
 
-        $this->orderService->createOrder(300, '', '', null, 'QO-TX-001');
+        $this->orderService->createOrder(300, new OrderOptions('', '', null, 'QO-TX-001'));
 
         $request = new WP_REST_Request('PUT', '/quick-order/v1/orders/QO-TX-001/status');
         $request->set_param('status', 'processing');
@@ -385,7 +386,7 @@ class RestApiTest extends WP_UnitTestCase
     {
         wp_set_current_user(self::factory()->user->create(['role' => 'administrator']));
 
-        $order = $this->orderService->createOrder(200, '測試商品');
+        $order = $this->orderService->createOrder(200, new OrderOptions('測試商品'));
 
         $request = new WP_REST_Request('GET', '/quick-order/v1/orders/'.$order->get_id());
         $response = rest_do_request($request);
@@ -414,7 +415,7 @@ class RestApiTest extends WP_UnitTestCase
     {
         wp_set_current_user(self::factory()->user->create(['role' => 'administrator']));
 
-        $this->orderService->createOrder(300, '', '', null, 'QO-STATUS-001');
+        $this->orderService->createOrder(300, new OrderOptions('', '', null, 'QO-STATUS-001'));
 
         $request = new WP_REST_Request('PUT', '/quick-order/v1/orders/QO-STATUS-001/status');
         $request->set_param('status', 'processing');
@@ -430,7 +431,7 @@ class RestApiTest extends WP_UnitTestCase
     {
         wp_set_current_user(self::factory()->user->create(['role' => 'administrator']));
 
-        $this->orderService->createOrder(100, '', '', null, 'QO-STATUS-002');
+        $this->orderService->createOrder(100, new OrderOptions('', '', null, 'QO-STATUS-002'));
 
         $request = new WP_REST_Request('PUT', '/quick-order/v1/orders/QO-STATUS-002/status');
 
@@ -457,8 +458,8 @@ class RestApiTest extends WP_UnitTestCase
     {
         wp_set_current_user(self::factory()->user->create(['role' => 'administrator']));
 
-        $this->orderService->createOrder(100, '訂單一');
-        $this->orderService->createOrder(200, '訂單二');
+        $this->orderService->createOrder(100, new OrderOptions('訂單一'));
+        $this->orderService->createOrder(200, new OrderOptions('訂單二'));
 
         $request = new WP_REST_Request('GET', '/quick-order/v1/orders');
         $response = rest_do_request($request);
@@ -497,8 +498,8 @@ class RestApiTest extends WP_UnitTestCase
         // Create guest orders before the user account exists
         update_option('quick_order_auto_create_customer', 'no');
         $customer = \Recca0120\QuickOrder\Customer::fromArray(['email' => $email]);
-        $this->orderService->createOrder(100, '', '', $customer);
-        $this->orderService->createOrder(200, '', '', $customer);
+        $this->orderService->createOrder(100, new OrderOptions('', '', $customer));
+        $this->orderService->createOrder(200, new OrderOptions('', '', $customer));
 
         // User registers later
         self::factory()->user->create(['user_email' => $email]);
@@ -562,7 +563,7 @@ class RestApiTest extends WP_UnitTestCase
 
         $admin = self::factory()->user->create(['role' => 'administrator']);
         wp_set_current_user($admin);
-        $this->orderService->createOrder(100, '', '', null, 'QO-APIKEY-001');
+        $this->orderService->createOrder(100, new OrderOptions('', '', null, 'QO-APIKEY-001'));
         wp_set_current_user(0);
 
         $request = new WP_REST_Request('PUT', '/quick-order/v1/orders/QO-APIKEY-001/status');

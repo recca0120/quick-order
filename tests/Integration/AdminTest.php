@@ -4,6 +4,8 @@ namespace Recca0120\QuickOrder\Tests\Integration;
 
 use Recca0120\QuickOrder\Admin;
 use Recca0120\QuickOrder\OrderForm;
+use Recca0120\QuickOrder\Customer;
+use Recca0120\QuickOrder\OrderOptions;
 use Recca0120\QuickOrder\OrderService;
 use WP_Ajax_UnitTestCase;
 
@@ -339,9 +341,9 @@ class AdminTest extends WP_Ajax_UnitTestCase
 
         $service = new OrderService();
         update_option('quick_order_auto_create_customer', 'no');
-        $customer = \Recca0120\QuickOrder\Customer::fromArray(['email' => $email]);
-        $service->createOrder(100, '', '', $customer);
-        $service->createOrder(200, '', '', $customer);
+        $customer = Customer::fromArray(['email' => $email]);
+        $service->createOrder(100, new OrderOptions('', '', $customer));
+        $service->createOrder(200, new OrderOptions('', '', $customer));
 
         $this->factory->user->create(['user_email' => $email]);
 
@@ -396,7 +398,6 @@ class AdminTest extends WP_Ajax_UnitTestCase
         do_action('admin_init');
 
         $settings = get_registered_settings();
-        $this->assertArrayHasKey('quick_order_serial_enabled', $settings);
         $this->assertArrayHasKey('quick_order_serial_salt', $settings);
     }
 
@@ -408,7 +409,6 @@ class AdminTest extends WP_Ajax_UnitTestCase
         $this->admin->renderPage();
         $html = ob_get_clean();
 
-        $this->assertStringContainsString('quick_order_serial_enabled', $html);
         $this->assertStringContainsString('quick_order_serial_salt', $html);
     }
 
@@ -426,8 +426,9 @@ class AdminTest extends WP_Ajax_UnitTestCase
 
     public function test_api_key_row_is_absent_from_settings_page_when_filter_set()
     {
-        global $wp_settings_fields;
+        global $wp_settings_fields, $wp_settings_sections;
         $wp_settings_fields['quick-order-settings'] = [];
+        $wp_settings_sections['quick-order-settings'] = [];
 
         add_filter('quick_order_api_key', function () {
             return 'from-filter';
@@ -440,14 +441,16 @@ class AdminTest extends WP_Ajax_UnitTestCase
         $html = ob_get_clean();
 
         $this->assertStringNotContainsString('quick_order_api_key', $html);
+        $this->assertStringNotContainsString('API 設定', $html);
 
         remove_all_filters('quick_order_api_key');
     }
 
     public function test_serial_salt_row_is_absent_from_settings_page_when_filter_set()
     {
-        global $wp_settings_fields;
+        global $wp_settings_fields, $wp_settings_sections;
         $wp_settings_fields['quick-order-settings'] = [];
+        $wp_settings_sections['quick-order-settings'] = [];
 
         add_filter('quick_order_serial_salt', function () {
             return 'from-filter';
@@ -460,14 +463,16 @@ class AdminTest extends WP_Ajax_UnitTestCase
         $html = ob_get_clean();
 
         $this->assertStringNotContainsString('quick_order_serial_salt', $html);
+        $this->assertStringNotContainsString('序號設定', $html);
 
         remove_all_filters('quick_order_serial_salt');
     }
 
     public function test_auto_create_customer_row_is_absent_from_settings_page_when_filter_set()
     {
-        global $wp_settings_fields;
+        global $wp_settings_fields, $wp_settings_sections;
         $wp_settings_fields['quick-order-settings'] = [];
+        $wp_settings_sections['quick-order-settings'] = [];
 
         add_filter('quick_order_auto_create_customer', function () {
             return 'yes';
@@ -480,6 +485,7 @@ class AdminTest extends WP_Ajax_UnitTestCase
         $html = ob_get_clean();
 
         $this->assertStringNotContainsString('quick_order_auto_create_customer', $html);
+        $this->assertStringNotContainsString('客戶設定', $html);
 
         remove_all_filters('quick_order_auto_create_customer');
     }

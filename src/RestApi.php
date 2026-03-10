@@ -146,6 +146,7 @@ class RestApi
     {
         try {
             $params = $request->get_params();
+            // REST API uses order_number; OrderSyncer uses transaction_id as idempotency key
             $params['transaction_id'] = $params['order_number'] ?? '';
 
             $order = $this->orderSyncer->sync($params);

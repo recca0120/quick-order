@@ -8,11 +8,11 @@ class OrderSyncer
         'new' => 'pending',
     ];
 
-    private const KNOWN_FIELDS = [
-        'transaction_reference', 'transaction_id', 'gateway_name',
-        'payment_method', 'amount', 'description', 'note', 'status',
-        'created_at', 'completed_at', 'name', 'email', 'phone_number',
-        'address_1', 'city', 'postcode', 'order_number', 'customer_ip', 'created_via',
+    // Fields consumed by syncOrder + buildOrder — excluded from _payment_* meta
+    private const SYNC_FIELDS = [
+        'transaction_id', 'status', 'amount', 'description', 'note',
+        'name', 'email', 'phone_number', 'address_1', 'city', 'postcode',
+        'order_number', 'created_via',
     ];
 
     /** @var OrderService */
@@ -50,7 +50,22 @@ class OrderSyncer
 
     public function sync(array $data): \WC_Order
     {
-        return $this->syncOrder($data);
+        $orderNumber = $data['transaction_id'] ?? '';
+        $rawStatus = $data['status'] ?? 'new';
+        $status = self::STATUS_MAP[$rawStatus] ?? $rawStatus;
+
+        $existing = $this->findOrderByOrderNumber($orderNumber);
+        $order = $existing !== null
+            ? $existing
+            : $this->buildOrder($data, $orderNumber, $status);
+
+        $this->applyOrderFields($order, $data);
+        if ($existing !== null) {
+            $order->set_status($status);
+        }
+        $order->save();
+
+        return $order;
     }
 
     /** @return \WC_Order|null */
@@ -58,7 +73,7 @@ class OrderSyncer
     {
         $data = $this->parseHeader($headerValue);
 
-        return $data !== null ? $this->syncOrder($data) : null;
+        return $data !== null ? $this->sync($data) : null;
     }
 
     /** @return array|null */
@@ -106,57 +121,38 @@ class OrderSyncer
         return $orders[0] ?? null;
     }
 
-    private function syncOrder(array $data): \WC_Order
-    {
-        $orderNumber = $data['transaction_id'] ?? '';
-        $rawStatus = $data['status'] ?? 'new';
-        $status = self::STATUS_MAP[$rawStatus] ?? $rawStatus;
-
-        $existing = $this->findOrderByOrderNumber($orderNumber);
-        $order = $existing !== null
-            ? $existing
-            : $this->buildOrder($data, $orderNumber, $status);
-
-        $this->applyOrderFields($order, $data);
-        if ($existing !== null) {
-            $order->set_status($status);
-        }
-        $order->save();
-
-        return $order;
-    }
-
     private function buildOrder(array $data, string $orderNumber, string $status): \WC_Order
     {
-        $customer = Customer::fromArray($data);
-
-        return $this->orderService->createOrder(
-            $data['amount'] ?? 0,
+        $options = new OrderOptions(
             $data['description'] ?? '商品',
             $data['note'] ?? '',
-            $customer,
+            Customer::fromArray($data),
             $orderNumber,
             $status,
             $data['created_via'] ?? 'checkout'
         );
+
+        return $this->orderService->createOrder($data['amount'] ?? 0, $options);
     }
 
     private function applyOrderFields(\WC_Order $order, array $data): void
     {
-        $reference = $data['transaction_reference'] ?? '';
-        if ($reference !== '') {
+        $remaining = array_diff_key($data, array_flip(self::SYNC_FIELDS));
+
+        if (($reference = $remaining['transaction_reference'] ?? '') !== '') {
             $order->set_transaction_id($reference);
         }
+        unset($remaining['transaction_reference']);
 
-        $ip = $data['customer_ip'] ?? '';
-        if ($ip !== '') {
+        if (($ip = $remaining['customer_ip'] ?? '') !== '') {
             $order->set_customer_ip_address($ip);
         }
+        unset($remaining['customer_ip']);
 
-        $this->applyDates($order, $data);
-        $this->applyPaymentMethod($order, $data);
-        $this->applyExtraFields($order, $data);
-        $this->applyRemittanceLast5($order, $data);
+        $remaining = $this->applyDates($order, $remaining);
+        $this->applyRemittanceLast5($order, $remaining);
+        $remaining = $this->applyPaymentMethod($order, $remaining);
+        $this->applyExtraFields($order, $remaining);
     }
 
     private function applyRemittanceLast5(\WC_Order $order, array $data): void
@@ -173,20 +169,22 @@ class OrderSyncer
         $order->update_meta_data('_omnipay_remittance_last5', substr($accountNumber, -5));
     }
 
-    private function applyDates(\WC_Order $order, array $data): void
+    private function applyDates(\WC_Order $order, array $data): array
     {
-        $createdAt = $data['created_at'] ?? '';
-        if ($createdAt !== '') {
+        if (($createdAt = $data['created_at'] ?? '') !== '') {
             $order->set_date_created($createdAt);
         }
 
-        $completedAt = $data['completed_at'] ?? '';
-        if ($completedAt !== '') {
+        if (($completedAt = $data['completed_at'] ?? '') !== '') {
             $order->set_date_paid($completedAt);
         }
+
+        unset($data['created_at'], $data['completed_at']);
+
+        return $data;
     }
 
-    private function applyPaymentMethod(\WC_Order $order, array $data): void
+    private function applyPaymentMethod(\WC_Order $order, array $data): array
     {
         $gatewayName = $data['gateway_name'] ?? '';
         $paymentMethod = $data['payment_method'] ?? '';
@@ -195,15 +193,15 @@ class OrderSyncer
             $order->set_payment_method($this->resolveGatewayId($gatewayName, $paymentMethod));
             $order->set_payment_method_title($gatewayName);
         }
+
+        unset($data['gateway_name'], $data['payment_method']);
+
+        return $data;
     }
 
     private function applyExtraFields(\WC_Order $order, array $data): void
     {
         foreach ($data as $key => $value) {
-            if (in_array($key, self::KNOWN_FIELDS, true)) {
-                continue;
-            }
-
             if ($value === null || $value === '') {
                 continue;
             }

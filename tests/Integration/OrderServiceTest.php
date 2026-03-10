@@ -3,6 +3,7 @@
 namespace Recca0120\QuickOrder\Tests\Integration;
 
 use Recca0120\QuickOrder\Customer;
+use Recca0120\QuickOrder\OrderOptions;
 use Recca0120\QuickOrder\OrderService;
 use WP_UnitTestCase;
 
@@ -37,7 +38,7 @@ class OrderServiceTest extends WP_UnitTestCase
 
     public function test_create_order_with_custom_name()
     {
-        $order = $this->service->createOrder(200, '會員儲值');
+        $order = $this->service->createOrder(200, new OrderOptions('會員儲值'));
 
         $items = $order->get_items('fee');
         $fee = reset($items);
@@ -46,7 +47,7 @@ class OrderServiceTest extends WP_UnitTestCase
 
     public function test_create_order_with_note()
     {
-        $order = $this->service->createOrder(300, '', '客戶備註');
+        $order = $this->service->createOrder(300, new OrderOptions('', '客戶備註'));
 
         $notes = wc_get_order_notes(['order_id' => $order->get_id()]);
         $noteContents = array_map(function ($n) {
@@ -120,7 +121,7 @@ class OrderServiceTest extends WP_UnitTestCase
             'postcode' => '110',
         ]);
 
-        $order = $this->service->createOrder(100, '', '', $customer);
+        $order = $this->service->createOrder(100, new OrderOptions('', '', $customer));
 
         $this->assertEquals('test@example.com', $order->get_billing_email());
         $this->assertEquals('John', $order->get_billing_first_name());
@@ -140,7 +141,7 @@ class OrderServiceTest extends WP_UnitTestCase
             'name' => 'New User',
         ]);
 
-        $order = $this->service->createOrder(100, '', '', $customer);
+        $order = $this->service->createOrder(100, new OrderOptions('', '', $customer));
 
         $this->assertGreaterThan(0, $order->get_customer_id());
         $user = get_user_by('id', $order->get_customer_id());
@@ -156,7 +157,7 @@ class OrderServiceTest extends WP_UnitTestCase
             'name' => 'No Auto',
         ]);
 
-        $order = $this->service->createOrder(100, '', '', $customer);
+        $order = $this->service->createOrder(100, new OrderOptions('', '', $customer));
 
         $this->assertEquals(0, $order->get_customer_id());
         $this->assertEquals($customer->email, $order->get_billing_email());
@@ -171,7 +172,7 @@ class OrderServiceTest extends WP_UnitTestCase
             'name' => 'Exist User',
         ]);
 
-        $order = $this->service->createOrder(100, '', '', $customer);
+        $order = $this->service->createOrder(100, new OrderOptions('', '', $customer));
 
         $this->assertEquals($userId, $order->get_customer_id());
     }
@@ -192,7 +193,7 @@ class OrderServiceTest extends WP_UnitTestCase
             'city' => '  台北市  ',
         ]);
 
-        $order = $this->service->createOrder(100, '', '', $customer);
+        $order = $this->service->createOrder(100, new OrderOptions('', '', $customer));
 
         // sanitize_text_field strips tags, trims, removes newlines
         $this->assertStringNotContainsString('<script>', $order->get_billing_first_name());
@@ -207,7 +208,7 @@ class OrderServiceTest extends WP_UnitTestCase
             'name' => 'Test',
         ]);
 
-        $order = $this->service->createOrder(100, '', '', $customer);
+        $order = $this->service->createOrder(100, new OrderOptions('', '', $customer));
 
         // Invalid email is sanitized to empty, so applyCustomer skips
         $this->assertEquals('', $order->get_billing_email());
@@ -269,7 +270,7 @@ class OrderServiceTest extends WP_UnitTestCase
 
     public function test_create_order_created_via_can_be_set_explicitly()
     {
-        $order = $this->service->createOrder(100, '', '', null, '', 'pending', 'rest-api');
+        $order = $this->service->createOrder(100, new OrderOptions('', '', null, '', 'pending', 'rest-api'));
 
         $this->assertEquals('rest-api', $order->get_created_via());
     }
@@ -283,8 +284,8 @@ class OrderServiceTest extends WP_UnitTestCase
         // Create guest orders before the user account exists
         update_option('quick_order_auto_create_customer', 'no');
         $customer = Customer::fromArray(['email' => $email]);
-        $order1 = $this->service->createOrder(100, '', '', $customer);
-        $order2 = $this->service->createOrder(200, '', '', $customer);
+        $order1 = $this->service->createOrder(100, new OrderOptions('', '', $customer));
+        $order2 = $this->service->createOrder(200, new OrderOptions('', '', $customer));
 
         $this->assertEquals(0, $order1->get_customer_id());
         $this->assertEquals(0, $order2->get_customer_id());
@@ -320,7 +321,7 @@ class OrderServiceTest extends WP_UnitTestCase
 
         update_option('quick_order_auto_create_customer', 'no');
         $customer = Customer::fromArray(['email' => $email]);
-        $order = $this->service->createOrder(100, '', '', $customer);
+        $order = $this->service->createOrder(100, new OrderOptions('', '', $customer));
 
         // Manually link the order to simulate an already-associated order
         $order->set_customer_id($userId);
@@ -345,7 +346,7 @@ class OrderServiceTest extends WP_UnitTestCase
 
     public function test_create_order_with_custom_order_number()
     {
-        $order = $this->service->createOrder(100, '', '', null, 'MY-CUSTOM-001');
+        $order = $this->service->createOrder(100, new OrderOptions('', '', null, 'MY-CUSTOM-001'));
 
         $this->assertEquals('MY-CUSTOM-001', $order->get_meta('_order_number'));
     }

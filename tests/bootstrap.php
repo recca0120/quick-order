@@ -26,6 +26,12 @@ tests_add_filter('muplugins_loaded', '_manually_load_plugins');
 
 require dirname(__DIR__).'/vendor/wp-phpunit/wp-phpunit/includes/bootstrap.php';
 
+// Load WooCommerce admin meta box helpers (e.g. woocommerce_wp_text_input)
+$wc_meta_box_functions = WC()->plugin_path().'/includes/admin/wc-meta-box-functions.php';
+if (file_exists($wc_meta_box_functions)) {
+    require_once $wc_meta_box_functions;
+}
+
 // Ensure WooCommerce tables and roles exist (CI fresh install)
 $administrator = get_role('administrator');
 if (! $administrator || ! $administrator->has_cap('manage_woocommerce')) {
@@ -34,5 +40,5 @@ if (! $administrator || ! $administrator->has_cap('manage_woocommerce')) {
 
     // Reload roles from DB to pick up new caps
     global $wp_roles;
-    $wp_roles = new WP_Roles;
+    $wp_roles = new WP_Roles();
 }
