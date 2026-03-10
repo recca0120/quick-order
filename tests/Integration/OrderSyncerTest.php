@@ -312,6 +312,26 @@ class OrderSyncerTest extends WP_UnitTestCase
         $this->assertEmpty($order->get_meta('_omnipay_remittance_last5'));
     }
 
+    // ── created_via ────────────────────────────────────────────
+
+    public function test_sync_sets_created_via_to_checkout_by_default()
+    {
+        $order = $this->runWithResponseHeader($this->paymentData);
+
+        $this->assertEquals('checkout', $order->get_created_via());
+    }
+
+    public function test_sync_uses_created_via_from_data()
+    {
+        $data = array_merge($this->paymentData, [
+            'transaction_id' => 'QO-20260307-003',
+            'created_via' => 'rest-api',
+        ]);
+        $order = $this->runWithResponseHeader($data);
+
+        $this->assertEquals('rest-api', $order->get_created_via());
+    }
+
     // ── 空值不建立訂單 ──────────────────────────────────────────
 
     public function test_does_not_create_order_when_header_is_empty()

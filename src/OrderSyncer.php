@@ -12,7 +12,7 @@ class OrderSyncer
         'transaction_reference', 'transaction_id', 'gateway_name',
         'payment_method', 'amount', 'description', 'note', 'status',
         'created_at', 'completed_at', 'name', 'email', 'phone_number',
-        'address_1', 'city', 'postcode', 'order_number', 'customer_ip',
+        'address_1', 'city', 'postcode', 'order_number', 'customer_ip', 'created_via',
     ];
 
     /** @var OrderService */
@@ -136,7 +136,8 @@ class OrderSyncer
             $data['note'] ?? '',
             $customer,
             $orderNumber,
-            $status
+            $status,
+            $data['created_via'] ?? 'checkout'
         );
     }
 

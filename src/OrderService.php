@@ -4,7 +4,7 @@ namespace Recca0120\QuickOrder;
 
 class OrderService
 {
-    public function createOrder(float $amount, string $description = '自訂訂單', string $note = '', ?Customer $customer = null, string $orderNumber = '', string $status = 'pending'): \WC_Order
+    public function createOrder(float $amount, string $description = '自訂訂單', string $note = '', ?Customer $customer = null, string $orderNumber = '', string $status = 'pending', string $createdVia = 'checkout'): \WC_Order
     {
         $amount = floatval($amount);
         if ($amount <= 0) {
@@ -12,6 +12,16 @@ class OrderService
         }
 
         $order = wc_create_order();
+        $order->set_created_via((string) apply_filters('quick_order_created_via', $createdVia));
+
+        $attribution = (array) apply_filters('quick_order_order_attribution', [
+            'source_type' => 'typein',
+            'utm_source'  => '(direct)',
+            'origin'      => '(direct)',
+        ]);
+        foreach ($attribution as $key => $value) {
+            $order->update_meta_data('_wc_order_attribution_'.$key, $value);
+        }
 
         $fee = new \WC_Order_Item_Fee();
         $fee->set_name($description);

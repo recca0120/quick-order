@@ -214,6 +214,66 @@ class OrderServiceTest extends WP_UnitTestCase
         $this->assertEquals(0, $order->get_customer_id());
     }
 
+    // ── Order Attribution ──
+
+    public function test_create_order_sets_attribution_to_direct_by_default()
+    {
+        $order = $this->service->createOrder(100);
+
+        $this->assertEquals('typein', $order->get_meta('_wc_order_attribution_source_type'));
+        $this->assertEquals('(direct)', $order->get_meta('_wc_order_attribution_utm_source'));
+        $this->assertEquals('(direct)', $order->get_meta('_wc_order_attribution_origin'));
+    }
+
+    public function test_create_order_attribution_can_be_overridden_by_filter()
+    {
+        add_filter('quick_order_order_attribution', fn () => [
+            'source_type' => 'utm',
+            'utm_source'  => 'google',
+            'origin'      => 'google.com',
+        ]);
+        $order = $this->service->createOrder(100);
+        remove_all_filters('quick_order_order_attribution');
+
+        $this->assertEquals('utm', $order->get_meta('_wc_order_attribution_source_type'));
+        $this->assertEquals('google', $order->get_meta('_wc_order_attribution_utm_source'));
+        $this->assertEquals('google.com', $order->get_meta('_wc_order_attribution_origin'));
+    }
+
+    public function test_create_order_attribution_can_be_disabled_by_filter()
+    {
+        add_filter('quick_order_order_attribution', fn () => []);
+        $order = $this->service->createOrder(100);
+        remove_all_filters('quick_order_order_attribution');
+
+        $this->assertEmpty($order->get_meta('_wc_order_attribution_source_type'));
+    }
+
+    // ── created_via ──
+
+    public function test_create_order_sets_created_via_to_checkout_by_default()
+    {
+        $order = $this->service->createOrder(100);
+
+        $this->assertEquals('checkout', $order->get_created_via());
+    }
+
+    public function test_create_order_created_via_can_be_overridden_by_filter()
+    {
+        add_filter('quick_order_created_via', fn () => 'admin');
+        $order = $this->service->createOrder(100);
+        remove_all_filters('quick_order_created_via');
+
+        $this->assertEquals('admin', $order->get_created_via());
+    }
+
+    public function test_create_order_created_via_can_be_set_explicitly()
+    {
+        $order = $this->service->createOrder(100, '', '', null, '', 'pending', 'rest-api');
+
+        $this->assertEquals('rest-api', $order->get_created_via());
+    }
+
     // ── linkOrdersByEmail ──
 
     public function test_link_orders_by_email_links_guest_orders()
